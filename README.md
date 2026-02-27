@@ -10,7 +10,8 @@ A comprehensive virtual memory management tool that visualizes paging, segmentat
 - **Optimal Page Replacement** — Benchmark optimal algorithm simulation
 - **Fragmentation Simulator** — Internal & external fragmentation analysis
 - **Demand Paging** — Pages loaded only on demand, not preloaded
-- **Visual Comparisons** — Bar charts, line graphs, heatmaps, and animated frame tables
+- **Visual Comparisons** — Bar charts, line graphs, and heatmaps (Plotly)
+- **Step-by-Step Animation** — Animated frame table playback
 - **Preset Scenarios** — One-click demo scenarios
 - **Export** — Download results as CSV or PDF reports
 
@@ -18,52 +19,46 @@ A comprehensive virtual memory management tool that visualizes paging, segmentat
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python, Flask |
-| Frontend | HTML, CSS, JavaScript |
-| Charts | Chart.js |
-| Export | jsPDF |
+| Backend & Logic | Python, Flask, Jinja2 |
+| Charts | Plotly (Python, server-side) |
+| Export | Python csv + fpdf2 |
+| Frontend | HTML, CSS, Minimal JS (~80 lines) |
 
 ## 📁 Project Structure
 
 ```
 OS_PROJECT/
 ├── backend/
-│   ├── app.py               # Flask API Gateway
-│   ├── config.py             # Shared constants
-│   ├── utils.py              # Input validation helpers
-│   ├── paging.py             # Paging Engine
-│   ├── segmentation.py       # Segmentation Engine
-│   ├── lru.py                # LRU Algorithm
-│   ├── optimal.py            # Optimal Algorithm
-│   ├── fragmentation.py      # Fragmentation Simulator
-│   ├── demand_paging.py      # Demand Paging Simulator
-│   └── requirements.txt      # Dependencies
+│   ├── app.py                    # Flask routes & template serving
+│   ├── config.py                 # Shared constants
+│   ├── utils.py                  # Input validation helpers
+│   ├── paging.py                 # Paging Engine
+│   ├── segmentation.py           # Segmentation Engine
+│   ├── lru.py                    # LRU Algorithm
+│   ├── optimal.py                # Optimal Algorithm
+│   ├── fragmentation.py          # Fragmentation Simulator
+│   ├── demand_paging.py          # Demand Paging Simulator
+│   ├── chart_generator.py        # Plotly chart generation (Python)
+│   ├── export_module.py          # CSV + PDF export (Python)
+│   ├── presets.py                # Preset scenarios
+│   └── requirements.txt          # Dependencies
 │
-├── frontend/
-│   ├── index.html            # Main page
-│   ├── css/                  # Stylesheets
-│   │   ├── base.css          # Theme & typography
-│   │   ├── layout.css        # Grid & sidebar
-│   │   ├── components.css    # Buttons, inputs, cards
-│   │   └── visualization.css # Tables, charts, heatmap
-│   ├── js/                   # JavaScript modules
-│   │   ├── main.js           # App init & tab switching
-│   │   ├── api.js            # API client
-│   │   ├── input-config.js   # Configuration panel
-│   │   ├── ref-string.js     # Reference string manager
-│   │   ├── segmentation-panel.js
-│   │   ├── paging-panel.js
-│   │   ├── presets.js        # Preset scenarios
-│   │   ├── frame-table.js    # Frame state table
-│   │   ├── animator.js       # Step-by-step animator
-│   │   ├── comparison-chart.js
-│   │   ├── fault-graph.js
-│   │   ├── fragmentation-heatmap.js
-│   │   ├── result-display.js
-│   │   └── export.js         # CSV & PDF export
-│   └── lib/                  # Third-party libraries
-│       ├── chart.min.js
-│       └── jspdf.min.js
+├── templates/
+│   ├── base.html                 # Base layout (sidebar + structure)
+│   ├── page_replacement.html     # Page replacement tab
+│   ├── paging.html               # Paging translator tab
+│   ├── segmentation.html         # Segmentation tab
+│   ├── fragmentation.html        # Fragmentation tab
+│   └── demand_paging.html        # Demand paging tab
+│
+├── static/
+│   ├── css/
+│   │   ├── base.css              # Theme & typography
+│   │   ├── layout.css            # Grid & sidebar
+│   │   ├── components.css        # Buttons, inputs, cards
+│   │   └── visualization.css     # Tables, heatmap, animator
+│   └── js/
+│       └── app.js                # Minimal JS (tabs, animation)
 │
 └── README.md
 ```
@@ -74,45 +69,47 @@ OS_PROJECT/
 - Python 3.8+
 - pip
 
-### Backend Setup
+### Setup & Run
 ```bash
 cd backend
 pip install -r requirements.txt
 python app.py
 ```
-The API server will start on `http://localhost:5000`.
+Open `http://localhost:5000` in your browser.
 
-### Frontend
-Open `frontend/index.html` in your browser, or serve it via Flask's static file serving.
+## 📡 Routes
 
-## 📡 API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/paging` | POST | Logical → physical address translation |
-| `/api/segmentation` | POST | Segment-based address translation |
-| `/api/simulate` | POST | LRU / Optimal page replacement simulation |
-| `/api/fragmentation` | POST | Internal & external fragmentation analysis |
-| `/api/demand-paging` | POST | Demand paging timeline simulation |
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/` | GET | Home → page replacement tab |
+| `/page-replacement` | GET/POST | LRU / Optimal simulation |
+| `/paging` | GET/POST | Logical → physical address translation |
+| `/segmentation` | GET/POST | Segment-based address translation |
+| `/fragmentation` | GET/POST | Internal & external fragmentation |
+| `/demand-paging` | GET/POST | Demand paging timeline |
+| `/export/csv` | POST | Download CSV |
+| `/export/pdf` | POST | Download PDF report |
 
 ## 🧩 Modules
 
-| # | Module | Layer |
-|---|--------|-------|
-| M1 | Config & Requirements | Backend |
-| M2 | Validation Utilities | Backend |
-| M3 | Flask API Gateway | Backend |
-| M4 | Paging Engine | Backend |
-| M5 | Segmentation Engine | Backend |
-| M6 | LRU Algorithm Engine | Backend |
-| M7 | Optimal Algorithm Engine | Backend |
-| M8 | Fragmentation Simulator | Backend |
-| M9 | Demand Paging Simulator | Backend |
-| M10 | HTML Page Skeleton | Frontend |
-| M11–M14 | CSS (Base, Layout, Components, Viz) | Frontend |
-| M15–M21 | JS Input Panels & Logic | Frontend |
-| M22–M24 | Visualizations (Tables, Charts, Heatmap) | Visualization |
-| M25 | Export & Report | Visualization |
+| # | Module | Language | File |
+|---|--------|----------|------|
+| M1 | Config & Requirements | Python | `config.py`, `requirements.txt` |
+| M2 | Validation Utilities | Python | `utils.py` |
+| M3 | Paging Engine | Python | `paging.py` |
+| M4 | Segmentation Engine | Python | `segmentation.py` |
+| M5 | LRU Algorithm | Python | `lru.py` |
+| M6 | Optimal Algorithm | Python | `optimal.py` |
+| M7 | Fragmentation Simulator | Python | `fragmentation.py` |
+| M8 | Demand Paging Simulator | Python | `demand_paging.py` |
+| M9 | Chart Generator | Python | `chart_generator.py` |
+| M10 | Export Module | Python | `export_module.py` |
+| M11 | Preset Scenarios | Python | `presets.py` |
+| M12 | Flask App & Routes | Python | `app.py` |
+| M13 | Base Template | Jinja2 | `templates/base.html` |
+| M14–M18 | Page Templates | Jinja2 | `templates/*.html` |
+| M19 | CSS Styles | CSS | `static/css/*.css` |
+| M20 | Minimal App JS | JS | `static/js/app.js` |
 
 ## 📄 License
 
