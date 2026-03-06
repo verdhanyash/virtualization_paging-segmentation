@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Paging — VM Simulator{% endblock %}
+{% block page_title %}Paging Engine{% endblock %}
+{% block page_subtitle %}Logical-to-physical address translation via page tables with TLB simulation{% endblock %}
+
+{% block content %}
+<div class="sim-layout">
+
+    <!-- ═══ Input Panel ═══ -->
+    <div class="card input-card">
+        <div class="card-header">
+            <h2>Configuration</h2>
+            {% if presets %}
+            <div class="preset-group">
+                <label class="label-sm">Presets</label>
+                <div class="preset-buttons">
+                    {% for name, p in presets.items() %}
+                    <button type="button" class="btn btn-preset"
+                            data-preset="{{ name }}"
+                            title="{{ p.description }}"
+                            onclick="loadPreset('{{ name }}')">
+                        {{ p.label }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <form method="POST" action="{{ url_for('paging') }}" id="pagingForm">
+            <div class="form-group">
+                <label for="page_size">Page Size (bytes)</label>
+                <select id="page_size" name="page_size" class="input">
+                    {% for ps in [64, 128, 256, 512, 1024, 2048, 4096] %}
+                    <option value="{{ ps }}" {% if input_page_size|default('512')|int == ps %}selected{% endif %}>{{ ps }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="page_table">Page Table (page:frame pairs)</label>
+                <input type="text" id="page_table" name="page_table"
+                       class="input" placeholder="e.g. 0:5, 1:6, 2:1, 3:2"
+                       value="{{ input_pt|default('') }}" required>
+                <span class="input-hint">Format: page_num:frame_num, separated by commas</span>
+            </div>
+
+            <div class="form-group">
+                <label for="logical_addresses">Logical Addresses</label>
+                <input type="text" id="logical_addresses" name="logical_addresses"
+                       class="input" placeholder="e.g. 0, 512, 1024, 1536, 700"
+                       value="{{ input_addrs|default('') }}" required>
+                <span class="input-hint">Comma or space separated addresses</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="runPaging">
+                ▶ Translate Addresses
+            </button>
+        </form>
+    </div>
+
+    <!-- ═══ Results ═══ -->
+    {% if result %}
+    <div class="results-section">
+
+        <!-- Summary -->
+        <div class="stats-grid">
+            <div class="stat-card stat-violet">
+                <div class="stat-label">Page Size</div>
+                <div class="stat-value">{{ result.page_size }}</div>
+                <div class="stat-sub">bytes</div>
+            </div>
+            <div class="stat-card stat-cyan">
+                <div class="stat-label">Total Accesses</div>
+                <div class="stat-value">{{ result.steps|length }}</div>
+            </div>
+            <div class="stat-card stat-amber">
+                <div class="stat-label">Page Faults</div>
+                <div class="stat-value">{{ result.faults }}</div>
+            </div>
+            <div class="stat-card stat-green">
+                <div class="stat-label">TLB Hit Rate</div>
+                <div class="stat-value">{{ (result.tlb_stats.hit_rate * 100)|round(1) }}%</div>
+                <div class="stat-sub">{{ result.tlb_stats.hits }} / {{ result.tlb_stats.hits + result.tlb_stats.misses }}</div>
+            </div>
+        </div>
+
+        <!-- Translation Table -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Address Translation Steps</h3>
+                <div class="animator-controls">
+                    <button class="btn btn-sm" onclick="animateTable('paging-table')" id="animatePaging">▶ Animate</button>
+                    <button class="btn btn-sm" onclick="showAllRows('paging-table')">Show All</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="sim-table" id="paging-table">
+                    <thead>
+                        <tr>
+                            <th>Logical Addr</th>
+                            <th>Page #</th>
+                            <th>Offset</th>
+                            <th>Frame #</th>
+                            <th>Physical Addr</th>
+                            <th>TLB</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in result.steps %}
+                        <tr class="animate-row {% if s.fault %}row-fault{% else %}row-hit{% endif %}">
+                            <td class="mono">{{ s.logical_address }}</td>
+                            <td class="mono">{{ s.page_number }}</td>
+                            <td class="mono">{{ s.offset }}</td>
+                            <td class="mono">{{ s.frame_number if s.frame_number is not none else '—' }}</td>
+                            <td class="mono">{{ s.physical_address if s.physical_address is not none else '—' }}</td>
+                            <td>{% if s.tlb_hit %}<span class="badge badge-hit">HIT</span>{% else %}<span class="badge badge-miss">MISS</span>{% endif %}</td>
+                            <td>{% if s.fault %}<span class="badge badge-fault">FAULT</span>{% else %}<span class="badge badge-hit">OK</span>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TLB Final State -->
+        <div class="card">
+            <h3>TLB Final State</h3>
+            <div class="table-wrap">
+                <table class="sim-table compact">
+                    <thead>
+                        <tr><th>Page</th><th>Frame</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for page, frame in result.tlb_stats.entries.items() %}
+                        <tr>
+                            <td class="mono">{{ page }}</td>
+                            <td class="mono">{{ frame }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
