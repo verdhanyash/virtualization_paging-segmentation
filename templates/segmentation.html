@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Segmentation — VM Simulator{% endblock %}
+{% block page_title %}Segmentation Engine{% endblock %}
+{% block page_subtitle %}Segment-based address translation with bounds checking and overlap detection{% endblock %}
+
+{% block content %}
+<div class="sim-layout">
+
+    <!-- ═══ Input Panel ═══ -->
+    <div class="card input-card">
+        <div class="card-header">
+            <h2>Configuration</h2>
+            {% if presets %}
+            <div class="preset-group">
+                <label class="label-sm">Presets</label>
+                <div class="preset-buttons">
+                    {% for name, p in presets.items() %}
+                    <button type="button" class="btn btn-preset"
+                            data-preset="{{ name }}"
+                            title="{{ p.description }}"
+                            onclick="loadPresetSegmentation('{{ name }}')">
+                        {{ p.label }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <form method="POST" action="{{ url_for('segmentation') }}" id="segmentationForm">
+            <!-- Segment Definitions -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h3>Segments</h3>
+                    <button type="button" class="btn btn-sm btn-accent" onclick="addSegmentRow()" id="addSegBtn">+ Add</button>
+                </div>
+                <input type="hidden" id="seg_count" name="seg_count" value="{{ segments|default([])|length or 2 }}">
+                <div id="segments-container">
+                    {% if segments %}
+                        {% for seg in segments %}
+                        <div class="dynamic-row" data-index="{{ loop.index0 }}">
+                            <input type="text" name="seg_name_{{ loop.index0 }}" class="input input-sm" placeholder="Name" value="{{ seg.name }}">
+                            <input type="number" name="seg_base_{{ loop.index0 }}" class="input input-sm" placeholder="Base" value="{{ seg.base }}">
+                            <input type="number" name="seg_limit_{{ loop.index0 }}" class="input input-sm" placeholder="Limit" value="{{ seg.limit }}">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">×</button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="dynamic-row" data-index="0">
+                            <input type="text" name="seg_name_0" class="input input-sm" placeholder="Name" value="code">
+                            <input type="number" name="seg_base_0" class="input input-sm" placeholder="Base" value="0">
+                            <input type="number" name="seg_limit_0" class="input input-sm" placeholder="Limit" value="1000">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">×</button>
+                        </div>
+                        <div class="dynamic-row" data-index="1">
+                            <input type="text" name="seg_name_1" class="input input-sm" placeholder="Name" value="data">
+                            <input type="number" name="seg_base_1" class="input input-sm" placeholder="Base" value="1000">
+                            <input type="number" name="seg_limit_1" class="input input-sm" placeholder="Limit" value="500">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">×</button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Access Requests -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h3>Access Requests</h3>
+                    <button type="button" class="btn btn-sm btn-accent" onclick="addRequestRow()" id="addReqBtn">+ Add</button>
+                </div>
+                <input type="hidden" id="req_count" name="req_count" value="{{ requests|default([])|length or 2 }}">
+                <div id="requests-container">
+                    {% if requests %}
+                        {% for req in requests %}
+                        <div class="dynamic-row" data-index="{{ loop.index0 }}">
+                            <input type="text" name="req_seg_{{ loop.index0 }}" class="input input-sm" placeholder="Segment" value="{{ req.segment }}">
+                            <input type="number" name="req_offset_{{ loop.index0 }}" class="input input-sm" placeholder="Offset" value="{{ req.offset }}">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">×</button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="dynamic-row" data-index="0">
+                            <input type="text" name="req_seg_0" class="input input-sm" placeholder="Segment" value="code">
+                            <input type="number" name="req_offset_0" class="input input-sm" placeholder="Offset" value="100">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">×</button>
+                        </div>
+                        <div class="dynamic-row" data-index="1">
+                            <input type="text" name="req_seg_1" class="input input-sm" placeholder="Segment" value="data">
+                            <input type="number" name="req_offset_1" class="input input-sm" placeholder="Offset" value="200">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">×</button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="runSegmentation">
+                ▶ Run Segmentation
+            </button>
+        </form>
+    </div>
+
+    <!-- ═══ Results ═══ -->
+    {% if result %}
+    <div class="results-section">
+
+        <div class="stats-grid">
+            <div class="stat-card stat-violet">
+                <div class="stat-label">Total Accesses</div>
+                <div class="stat-value">{{ result.total_accesses }}</div>
+            </div>
+            <div class="stat-card stat-green">
+                <div class="stat-label">Successful</div>
+                <div class="stat-value">{{ result.successful }}</div>
+            </div>
+            <div class="stat-card stat-amber">
+                <div class="stat-label">Seg Faults</div>
+                <div class="stat-value">{{ result.seg_faults }}</div>
+            </div>
+            <div class="stat-card stat-red">
+                <div class="stat-label">Protection Faults</div>
+                <div class="stat-value">{{ result.protection_faults }}</div>
+            </div>
+        </div>
+
+        <!-- Memory Map -->
+        <div class="card">
+            <h3>Memory Map</h3>
+            <div class="memory-map">
+                {% for region in result.memory_map %}
+                <div class="mem-region" style="--region-hue: {{ loop.index0 * 60 }}">
+                    <div class="mem-region-label">{{ region.segment_name }}</div>
+                    <div class="mem-region-info">Base: {{ region.base }} | Limit: {{ region.limit }} | End: {{ region.end }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if result.overlaps %}
+            <div class="overlap-warning">
+                ⚠️ Overlapping regions detected:
+                {% for o in result.overlaps %}
+                <span class="overlap-item">{{ o.seg_a }} ↔ {{ o.seg_b }} ({{ o.overlap_start }}–{{ o.overlap_end }})</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Translation Steps -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Translation Steps</h3>
+                <div class="animator-controls">
+                    <button class="btn btn-sm" onclick="animateTable('seg-table')">▶ Animate</button>
+                    <button class="btn btn-sm" onclick="showAllRows('seg-table')">Show All</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="sim-table" id="seg-table">
+                    <thead>
+                        <tr>
+                            <th>Segment</th>
+                            <th>Offset</th>
+                            <th>Base</th>
+                            <th>Limit</th>
+                            <th>Physical Addr</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in result.steps %}
+                        <tr class="animate-row {% if s.seg_fault or s.protection_fault %}row-fault{% else %}row-hit{% endif %}">
+                            <td class="mono">{{ s.segment_name }}</td>
+                            <td class="mono">{{ s.offset }}</td>
+                            <td class="mono">{{ s.base if s.base is not none else '—' }}</td>
+                            <td class="mono">{{ s.limit if s.limit is not none else '—' }}</td>
+                            <td class="mono">{{ s.physical_address if s.physical_address is not none else '—' }}</td>
+                            <td>
+                                {% if s.seg_fault %}<span class="badge badge-fault">SEG FAULT</span>
+                                {% elif s.protection_fault %}<span class="badge badge-fault">PROTECTION</span>
+                                {% else %}<span class="badge badge-hit">OK</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

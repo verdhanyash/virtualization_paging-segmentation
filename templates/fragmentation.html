@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Fragmentation — VM Simulator{% endblock %}
+{% block page_title %}Fragmentation Simulator{% endblock %}
+{% block page_subtitle %}Analyze internal & external fragmentation across first-fit, best-fit, and worst-fit strategies{% endblock %}
+
+{% block content %}
+<div class="sim-layout">
+
+    <!-- ═══ Input Panel ═══ -->
+    <div class="card input-card">
+        <div class="card-header">
+            <h2>Configuration</h2>
+            {% if presets %}
+            <div class="preset-group">
+                <label class="label-sm">Presets</label>
+                <div class="preset-buttons">
+                    {% for name, p in presets.items() %}
+                    <button type="button" class="btn btn-preset"
+                            data-preset="{{ name }}"
+                            title="{{ p.description }}"
+                            onclick="loadPreset('{{ name }}')">
+                        {{ p.label }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <form method="POST" action="{{ url_for('fragmentation') }}" id="fragForm">
+            <div class="form-group">
+                <label for="block_sizes">Memory Block Sizes</label>
+                <input type="text" id="block_sizes" name="block_sizes"
+                       class="input" placeholder="e.g. 200, 500, 100, 300, 600"
+                       value="{{ input_blocks|default('') }}" required>
+                <span class="input-hint">Comma-separated block sizes in bytes</span>
+            </div>
+
+            <div class="form-group">
+                <label for="process_sizes">Process Request Sizes</label>
+                <input type="text" id="process_sizes" name="process_sizes"
+                       class="input" placeholder="e.g. 150, 400, 90, 250"
+                       value="{{ input_procs|default('') }}" required>
+                <span class="input-hint">Comma-separated process memory requests</span>
+            </div>
+
+            <div class="form-group">
+                <label for="strategy">Allocation Strategy</label>
+                <select id="strategy" name="strategy" class="input">
+                    <option value="first_fit" {% if input_strategy|default('first_fit') == 'first_fit' %}selected{% endif %}>First Fit</option>
+                    <option value="best_fit" {% if input_strategy|default('') == 'best_fit' %}selected{% endif %}>Best Fit</option>
+                    <option value="worst_fit" {% if input_strategy|default('') == 'worst_fit' %}selected{% endif %}>Worst Fit</option>
+                    <option value="all" {% if input_strategy|default('') == 'all' %}selected{% endif %}>Compare All</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="runFrag">
+                ▶ Run Simulation
+            </button>
+        </form>
+    </div>
+
+    <!-- ═══ Single Strategy Results ═══ -->
+    {% if result %}
+    <div class="results-section">
+        <div class="stats-grid">
+            <div class="stat-card stat-violet">
+                <div class="stat-label">Strategy</div>
+                <div class="stat-value" style="font-size:1.2rem">{{ result.strategy.replace('_', ' ').title() }}</div>
+            </div>
+            <div class="stat-card stat-green">
+                <div class="stat-label">Allocated</div>
+                <div class="stat-value">{{ result.total_allocated }}</div>
+                <div class="stat-sub">{{ (result.allocation_success_rate * 100)|round(1) }}%</div>
+            </div>
+            <div class="stat-card stat-amber">
+                <div class="stat-label">Internal Frag</div>
+                <div class="stat-value">{{ result.total_internal_frag }}</div>
+                <div class="stat-sub">bytes wasted</div>
+            </div>
+            <div class="stat-card stat-red">
+                <div class="stat-label">External Frag</div>
+                <div class="stat-value">{{ result.total_external_frag }}</div>
+                <div class="stat-sub">bytes unusable</div>
+            </div>
+        </div>
+
+        {% if charts and charts.bar %}
+        <div class="card chart-card">
+            <h3>Block Allocation</h3>
+            <div class="chart-container">{{ charts.bar|safe }}</div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <h3>Allocation Steps</h3>
+            <div class="table-wrap">
+                <table class="sim-table">
+                    <thead>
+                        <tr>
+                            <th>Process</th>
+                            <th>Request Size</th>
+                            <th>Allocated?</th>
+                            <th>Block</th>
+                            <th>Block Size</th>
+                            <th>Internal Frag</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in result.steps %}
+                        <tr class="{% if s.allocated %}row-hit{% else %}row-fault{% endif %}">
+                            <td class="mono">{{ s.process }}</td>
+                            <td class="mono">{{ s.request_size }}</td>
+                            <td>{% if s.allocated %}<span class="badge badge-hit">YES</span>{% else %}<span class="badge badge-fault">NO</span>{% endif %}</td>
+                            <td class="mono">{{ s.block_id if s.block_id is not none else '—' }}</td>
+                            <td class="mono">{{ s.block_size if s.block_size is not none else '—' }}</td>
+                            <td class="mono">{{ s.internal_frag }}</td>
+                            <td class="action-text">{{ s.action }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══ Comparison Results (all strategies) ═══ -->
+    {% if comparison %}
+    <div class="results-section">
+        {% if charts and charts.comparison %}
+        <div class="card chart-card">
+            <h3>Strategy Comparison</h3>
+            <div class="chart-container">{{ charts.comparison|safe }}</div>
+        </div>
+        {% endif %}
+
+        <div class="comparison-grid">
+            {% for strat_name, strat_result in comparison.items() %}
+            <div class="card">
+                <h3>{{ strat_name.replace('_', ' ').title() }}</h3>
+                <div class="mini-stats">
+                    <span class="mini-stat">✅ {{ strat_result.total_allocated }} allocated</span>
+                    <span class="mini-stat">⚠️ {{ strat_result.total_internal_frag }}B internal</span>
+                    <span class="mini-stat">🚫 {{ strat_result.total_external_frag }}B external</span>
+                </div>
+                {% if charts and charts['bar_' + strat_name] %}
+                <div class="chart-container chart-sm">{{ charts['bar_' + strat_name]|safe }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

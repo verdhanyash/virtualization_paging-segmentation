@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Virtual Memory Optimization Simulator — visualize paging, segmentation, page replacement, and fragmentation.">
+    <title>{% block title %}VM Simulator{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/visualization.css') }}">
+    <script src="https://cdn.plot.ly/plotly-3.0.1.min.js"></script>
+</head>
+<body>
+    <!-- ═══ Sidebar ═══ -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">⚙️</span>
+                <span class="logo-text">VM Simulator</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+        </div>
+        <ul class="nav-links">
+            <li>
+                <a href="{{ url_for('page_replacement') }}"
+                   class="nav-link {% if request.path == '/page-replacement' %}active{% endif %}"
+                   id="nav-page-replacement">
+                    <span class="nav-icon">🔄</span>
+                    <span class="nav-label">Page Replacement</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('paging') }}"
+                   class="nav-link {% if request.path == '/paging' %}active{% endif %}"
+                   id="nav-paging">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-label">Paging</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('segmentation') }}"
+                   class="nav-link {% if request.path == '/segmentation' %}active{% endif %}"
+                   id="nav-segmentation">
+                    <span class="nav-icon">🧩</span>
+                    <span class="nav-label">Segmentation</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('fragmentation') }}"
+                   class="nav-link {% if request.path == '/fragmentation' %}active{% endif %}"
+                   id="nav-fragmentation">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Fragmentation</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('demand_paging') }}"
+                   class="nav-link {% if request.path == '/demand-paging' %}active{% endif %}"
+                   id="nav-demand-paging">
+                    <span class="nav-icon">💾</span>
+                    <span class="nav-label">Demand Paging</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <p class="version-text">v1.0 — Educational Tool</p>
+        </div>
+    </nav>
+
+    <!-- ═══ Main Content ═══ -->
+    <main class="main-content" id="mainContent">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}" role="alert">
+                            <span class="flash-icon">{% if category == 'error' %}⚠️{% else %}ℹ️{% endif %}</span>
+                            <span class="flash-text">{{ message }}</span>
+                            <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="page-header">
+            <h1 id="page-title">{% block page_title %}Virtual Memory Simulator{% endblock %}</h1>
+            <p class="page-subtitle">{% block page_subtitle %}{% endblock %}</p>
+        </div>
+
+        <div class="content-body">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
