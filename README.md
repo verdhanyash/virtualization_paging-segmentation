@@ -22,7 +22,7 @@ A comprehensive virtual memory management tool that visualizes paging, segmentat
 | Backend & Logic | Python, Flask, Jinja2 |
 | Charts | Plotly (Python, server-side) |
 | Export | Python csv + fpdf2 |
-| Frontend | HTML, CSS, Minimal JS (~80 lines) |
+| Frontend | HTML, CSS, JS  |
 
 ## 📁 Project Structure
 
