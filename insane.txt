@@ -1,0 +1,535 @@
+================================================================================
+     VIRTUAL MEMORY OPTIMIZATION CHALLENGE - MODULAR PROJECT STRUCTURE
+================================================================================
+
+TEAM: 3 Members
+GOAL: Each task is independent — any member can pick any task
+
+================================================================================
+                              FOLDER STRUCTURE
+================================================================================
+
+virtual-memory-optimizer/
+│
+├── core/                         # BACKEND LOGIC (No UI)
+│   ├── __init__.py
+│   ├── engine.py                 ← T1: Base classes (DONE ✓)
+│   ├── fifo.py                   ← T2: FIFO algorithm + Belady's anomaly
+│   ├── lru.py                    ← T3: LRU algorithm
+│   ├── optimal.py                ← T4: Optimal algorithm
+│   └── segmentation.py           ← T5: Segmentation & fragmentation
+│
+├── visualization/                # CHARTS & GRAPHS (No UI layout)
+│   ├── __init__.py
+│   ├── charts.py                 ← T6: Individual algorithm charts
+│   ├── comparison.py             ← T7: Side-by-side algo comparison
+│   └── belady_chart.py           ← T8: Belady's anomaly visualization
+│
+├── app/                          # UI COMPONENTS
+│   ├── __init__.py
+│   ├── layout.py                 ← T9: Page layout structure
+│   ├── callbacks.py              ← T10: All Dash callbacks
+│   ├── animation.py              ← T11: Step-by-step animation
+│   └── main.py                   ← T12: App entry point
+│
+├── assets/
+│   └── theme.css                 ← T13: Jet black/white theme
+│
+├── tests/                        ← T14: Unit tests for all modules
+│   ├── test_fifo.py
+│   ├── test_lru.py
+│   ├── test_optimal.py
+│   └── test_engine.py
+│
+├── requirements.txt
+└── README.md
+
+================================================================================
+                         STANDARD OUTPUT FORMAT
+================================================================================
+
+Every algorithm function MUST return this exact structure:
+
+{
+  "algorithm": "FIFO",           # string: "FIFO" | "LRU" | "Optimal"
+  "reference_string": [1,2,3],   # input page sequence
+  "frame_count": 3,              # number of frames
+  "steps": [                     # one entry per page access
+    {
+      "page": 1,                 # page being accessed
+      "frames": [1, None, None], # frame state AFTER this step
+      "fault": true,             # was this a page fault?
+      "evicted": null            # page evicted (null if none)
+    }
+  ],
+  "total_faults": 7,
+  "total_hits": 5,
+  "fault_positions": [0,1,2,4,6] # indexes where faults occurred
+}
+
+================================================================================
+                           TASK BREAKDOWN
+================================================================================
+
+------------------------------------------------------------------------------
+CORE ALGORITHMS (Pick one each — 3 people, 3 algorithms)
+------------------------------------------------------------------------------
+
+■ T1: Core Engine — core/engine.py [COMPLETED ✓]
+  Owner: ___________
+  Status: DONE
+  Contains: PageTable, FramePool, translate_address(), detect_page_fault()
+
+------------------------------------------------------------------------------
+
+■ T2: FIFO Algorithm + Belady's Anomaly — core/fifo.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★☆
+
+  Functions to implement:
+  
+  1. run_fifo(reference_string: list[int], frames: int) -> dict
+     - Use collections.deque to track page insertion order
+     - On fault: evict the OLDEST page (front of queue)
+     - Return standard result dict (see format above)
+
+  2. detect_beladys_anomaly(reference_string: list[int], max_frames: int) -> dict
+     - Run FIFO for frame counts 1 to max_frames
+     - Detect where increasing frames INCREASES faults (the anomaly!)
+     - Return: {
+         "anomaly_found": bool,
+         "fault_counts": {1: n, 2: n, 3: n, ...},
+         "anomaly_at": [(3, 4), ...] # pairs where faults increased
+       }
+
+  Test case (Belady's classic):
+    reference_string = [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]
+    3 frames → 9 faults
+    4 frames → 10 faults  ← ANOMALY! More frames = more faults
+
+  Copilot prompt:
+  ```
+  Create `core/fifo.py` for a virtual memory simulator.
+  
+  Requirements:
+  - Function `run_fifo(reference_string: list[int], frames: int) -> dict`
+    - Uses a queue (collections.deque) to track insertion order
+    - Evicts the page that entered memory first
+    - Returns dict: {"algorithm":"FIFO","reference_string":[],"frame_count":int,
+      "steps":[],"total_faults":int,"total_hits":int,"fault_positions":[]}
+    - Each step: {"page":int,"frames":list,"fault":bool,"evicted":int|None}
+  
+  - Function `detect_beladys_anomaly(reference_string: list[int], max_frames: int) -> dict`
+    - Runs run_fifo() for frame counts 1 through max_frames
+    - Returns {"anomaly_found": bool, "fault_counts": {1:n, 2:n...}, "anomaly_at": [(f1,f2)]}
+    - Anomaly = fault count increases when frame count increases
+  
+  No UI code. Add docstrings. Include test for [1,2,3,4,1,2,5,1,2,3,4,5].
+  ```
+
+------------------------------------------------------------------------------
+
+■ T3: LRU Algorithm — core/lru.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★☆
+
+  Functions to implement:
+  
+  1. run_lru(reference_string: list[int], frames: int) -> dict
+     - Use collections.OrderedDict to track recency
+     - On page HIT: move page to END (most recently used)
+     - On fault when full: evict FIRST item (least recently used)
+     - Return standard result dict
+
+  Key insight: OrderedDict.move_to_end(key) is your friend!
+
+  Test case:
+    reference_string = [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]
+    3 frames → 10 faults
+
+  Copilot prompt:
+  ```
+  Create `core/lru.py` for a virtual memory simulator.
+  
+  Requirements:
+  - Function `run_lru(reference_string: list[int], frames: int) -> dict`
+    - Use collections.OrderedDict to track recency (most recent = last)
+    - On page hit: move that page to the end
+    - On fault when full: evict first item (least recently used)
+    - Returns dict: {"algorithm":"LRU","reference_string":[],"frame_count":int,
+      "steps":[],"total_faults":int,"total_hits":int,"fault_positions":[]}
+    - Each step: {"page":int,"frames":list,"fault":bool,"evicted":int|None}
+  
+  No UI code. Add docstring with worked example for [1,2,3,4,1,2,5,1,2,3,4,5] with 3 frames.
+  ```
+
+------------------------------------------------------------------------------
+
+■ T4: Optimal Algorithm — core/optimal.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★★
+
+  Functions to implement:
+  
+  1. run_optimal(reference_string: list[int], frames: int) -> dict
+     - On fault when full: look AHEAD in reference string
+     - Evict page used FARTHEST in future (or never used again)
+     - Return standard result dict
+
+  2. _find_optimal_victim(loaded_pages: list, future_refs: list) -> int
+     - Helper: returns which page to evict
+     - If page never used again → evict it (priority)
+     - Else evict page with maximum "next use index"
+
+  Test case:
+    reference_string = [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]
+    3 frames → 7 faults (theoretical minimum!)
+
+  Copilot prompt:
+  ```
+  Create `core/optimal.py` for a virtual memory simulator.
+  
+  Requirements:
+  - Function `run_optimal(reference_string: list[int], frames: int) -> dict`
+    - For each fault when frames full, look ahead in reference_string
+    - Evict page whose next use is furthest in future (or never used again)
+    - Returns dict: {"algorithm":"Optimal","reference_string":[],"frame_count":int,
+      "steps":[],"total_faults":int,"total_hits":int,"fault_positions":[]}
+    - Each step: {"page":int,"frames":list,"fault":bool,"evicted":int|None}
+  
+  - Helper function `_find_optimal_victim(loaded_pages, future_refs) -> int`
+  
+  No UI code. Add docstrings. This gives theoretical minimum faults.
+  ```
+
+------------------------------------------------------------------------------
+
+■ T5: Segmentation & Fragmentation — core/segmentation.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★★
+
+  Classes & functions:
+  
+  1. class Segment:
+     - Fields: name, base, limit, status ("loaded"|"swapped")
+  
+  2. class SegmentTable:
+     - add_segment(name, size) → allocates at next free address
+     - translate(segment_name, offset) → physical address or SegmentFaultError
+     - free_segment(name) → creates a hole
+     - get_fragmentation_stats() → {used, internal_frag, external_frag, total}
+  
+  3. simulate_fragmentation(operations: list[dict]) -> list[dict]
+     - Input: [{"action":"alloc","name":"code","size":200}, {"action":"free","name":"code"}]
+     - Output: list of memory snapshots after each operation
+
+  Copilot prompt:
+  ```
+  Create `core/segmentation.py` for a virtual memory simulator.
+  
+  Requirements:
+  - Class `Segment` with fields: name, base, limit, status
+  - Class `SegmentTable` with methods:
+    - add_segment(name, size) → allocates at next free address
+    - translate(segment_name, offset) → physical address or raises SegmentFaultError
+    - free_segment(name) → marks as freed, creates hole
+    - get_fragmentation_stats() → {"used":int,"internal_frag":int,"external_frag":int,"total":int}
+  - Function `simulate_fragmentation(operations) -> list[dict]`
+    - Each snapshot: {"segments":[],"free_holes":[],"fragmentation":{}}
+  
+  Total memory = 4096 bytes default. No UI code.
+  ```
+
+------------------------------------------------------------------------------
+VISUALIZATION / GRAPHS (Independent tasks)
+------------------------------------------------------------------------------
+
+■ T6: Algorithm Charts — visualization/charts.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★☆
+
+  Functions:
+  
+  1. build_fault_timeline(result: dict) -> go.Figure
+     - Line chart: x = step#, y = cumulative faults
+     - White dots on fault positions
+  
+  2. build_memory_heatmap(result: dict) -> go.Figure
+     - Heatmap: x = step, y = frame index, color = page number
+  
+  3. build_fault_pie(result: dict) -> go.Figure
+     - Donut chart: faults vs hits
+
+  Theme: Black background (#0a0a0a), white/gray elements, monospace font
+
+  Copilot prompt:
+  ```
+  Create `visualization/charts.py` using Plotly.
+  
+  Theme: black background (#0a0a0a), white/gray text, monospace font.
+  
+  Functions:
+  1. build_fault_timeline(result: dict) -> go.Figure
+     - Line chart: x=step, y=cumulative faults, white dots on fault positions
+  
+  2. build_memory_heatmap(result: dict) -> go.Figure
+     - Heatmap: x=step, y=frame, color=page number (white=loaded, black=empty)
+  
+  3. build_fault_pie(result: dict) -> go.Figure
+     - Donut: faults vs hits, white and gray colors
+  
+  Return go.Figure objects only. No Dash code.
+  ```
+
+------------------------------------------------------------------------------
+
+■ T7: Algorithm Comparison — visualization/comparison.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★☆
+
+  Functions:
+  
+  1. run_all_algorithms(reference_string, frame_count) -> dict
+     - Returns {"FIFO": result, "LRU": result, "Optimal": result}
+  
+  2. build_comparison_bar(all_results: dict) -> go.Figure
+     - Grouped bar chart: x = algo names, bars = faults & hits
+  
+  3. build_fault_race(all_results: dict) -> go.Figure
+     - 3 lines on one chart showing fault accumulation over time
+
+  Copilot prompt:
+  ```
+  Create `visualization/comparison.py` for a virtual memory simulator.
+  
+  Requirements:
+  - Function `run_all_algorithms(reference_string, frame_count) -> dict`
+    - Returns {"FIFO": result_dict, "LRU": result_dict, "Optimal": result_dict}
+  
+  - Function `build_comparison_bar(all_results: dict) -> go.Figure`
+    - Grouped bar: x=algorithm, y=faults (white bars), hits (gray bars)
+    - Black background, annotate values on bars
+  
+  - Function `build_fault_race(all_results: dict) -> go.Figure`
+    - 3 lines: cumulative faults per step for each algo
+    - White=FIFO, light gray=LRU, dark gray=Optimal
+  
+  Return go.Figure objects. No Dash code.
+  ```
+
+------------------------------------------------------------------------------
+
+■ T8: Belady's Anomaly Chart — visualization/belady_chart.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★☆☆
+
+  Functions:
+  
+  1. build_belady_chart(anomaly_result: dict) -> go.Figure
+     - Line chart: x = frame count, y = fault count
+     - Highlight anomaly points (where line goes UP instead of down)
+     - Red markers on anomaly positions
+
+  Copilot prompt:
+  ```
+  Create `visualization/belady_chart.py` using Plotly.
+  
+  Requirements:
+  - Function `build_belady_chart(anomaly_result: dict) -> go.Figure`
+    - Input: {"fault_counts": {1:n, 2:n...}, "anomaly_at": [(3,4)...]}
+    - Line chart: x=frame count, y=fault count
+    - Normal points: white
+    - Anomaly points: red circles with annotation
+    - Title: "Belady's Anomaly Detection"
+    - Black background theme
+  
+  Return go.Figure object.
+  ```
+
+------------------------------------------------------------------------------
+UI COMPONENTS (Can be split further)
+------------------------------------------------------------------------------
+
+■ T9: Page Layout — app/layout.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★☆
+
+  Creates the Dash HTML structure:
+  - Left sidebar (300px): inputs, sliders, buttons
+  - Main area: frame grid display
+  - Bottom: chart area
+
+  Copilot prompt:
+  ```
+  Create `app/layout.py` for a Dash virtual memory simulator.
+  
+  Theme: jet black (#0a0a0a), white text (#f0f0f0), Geist Mono font, borders #333.
+  
+  Layout:
+  - Left sidebar (300px):
+    - Text input: reference_string (comma-separated)
+    - Slider: frame_count (1-10)
+    - Radio: algorithm (FIFO, LRU, Optimal)
+    - Buttons: Run, Step, Reset
+  - Main area:
+    - Div: frame-grid (shows N boxes for frames)
+    - Stats bar: faults / hits / fault rate %
+  - Bottom: div id="chart-area"
+  
+  Use Dash html/dcc components. No callbacks here — layout only.
+  All colors as inline style dicts.
+  ```
+
+------------------------------------------------------------------------------
+
+■ T10: Callbacks — app/callbacks.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★★
+
+  All Dash callbacks:
+  - Run button → execute algorithm, store result
+  - Step button → show next step
+  - Reset → clear everything
+  - Update charts when result changes
+
+------------------------------------------------------------------------------
+
+■ T11: Animation — app/animation.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★★
+
+  Step-by-step animation logic:
+  - Auto-play mode with interval
+  - Frame highlighting on page fault
+  - Smooth transitions
+
+------------------------------------------------------------------------------
+
+■ T12: App Entry Point — app/main.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★☆☆
+
+  Just imports and runs the Dash app.
+
+------------------------------------------------------------------------------
+
+■ T13: Theme CSS — assets/theme.css
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★☆☆
+
+  Copilot prompt:
+  ```
+  Create `assets/theme.css` for a Dash app.
+  
+  Requirements:
+  - Import Geist Mono or fallback to 'Courier New', monospace
+  - body: background #0a0a0a, color #f0f0f0
+  - inputs/dropdowns: background #111, border 1px solid #333, color #f0f0f0
+  - buttons: background #f0f0f0, color #0a0a0a, padding 8px 20px
+  - .frame-box: 48px square, border #333, flexbox centered
+  - .frame-fault: border 2px solid white, background #1a1a1a
+  - .frame-loaded: background #f0f0f0, color #0a0a0a
+  - .frame-empty: background #111, color #555
+  ```
+
+------------------------------------------------------------------------------
+
+■ T14: Unit Tests — tests/
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★☆
+
+  Test files for each algorithm:
+  - test_fifo.py: verify fault counts, Belady's anomaly detection
+  - test_lru.py: verify LRU eviction order
+  - test_optimal.py: verify minimum faults
+  - test_engine.py: verify PageTable, FramePool
+
+================================================================================
+                        TASK ASSIGNMENT MATRIX
+================================================================================
+
+Pick tasks so each person has ~equal work:
+
+┌─────────────┬────────────────────────────────────────────────────────────┐
+│ PERSON 1    │ T2 (FIFO + Belady's) + T8 (Belady chart) + T13 (CSS)       │
+├─────────────┼────────────────────────────────────────────────────────────┤
+│ PERSON 2    │ T3 (LRU) + T6 (Charts) + T9 (Layout)                       │
+├─────────────┼────────────────────────────────────────────────────────────┤
+│ PERSON 3    │ T4 (Optimal) + T7 (Comparison) + T10 (Callbacks)           │
+├─────────────┼────────────────────────────────────────────────────────────┤
+│ SHARED      │ T5 (Segmentation), T11 (Animation), T14 (Tests)            │
+└─────────────┴────────────────────────────────────────────────────────────┘
+
+================================================================================
+                          GIT WORKFLOW
+================================================================================
+
+Branches (minimum 7 commits total):
+
+main
+├── feature/fifo-algorithm        → Person 1
+├── feature/lru-algorithm         → Person 2
+├── feature/optimal-algorithm     → Person 3
+├── feature/visualization         → After algos merged
+├── feature/ui-layout             → After algos merged
+├── feature/integration           → Final merge
+└── feature/testing               → Add tests
+
+Commit message format:
+  feat: add FIFO algorithm with Belady's anomaly detection
+  fix: correct LRU eviction order
+  style: apply jet black theme to layout
+  test: add unit tests for optimal algorithm
+  docs: update README with usage instructions
+
+================================================================================
+                    DEPENDENCIES BETWEEN TASKS
+================================================================================
+
+Independent (can start immediately):
+  ✓ T2 (FIFO) — no dependencies
+  ✓ T3 (LRU) — no dependencies
+  ✓ T4 (Optimal) — no dependencies
+  ✓ T5 (Segmentation) — no dependencies
+  ✓ T13 (CSS) — no dependencies
+
+Requires algorithms complete:
+  → T6 (Charts) — needs T2/T3/T4 done
+  → T7 (Comparison) — needs T2/T3/T4 done
+  → T8 (Belady chart) — needs T2 done
+
+Requires charts + layout:
+  → T10 (Callbacks) — needs T6/T9 done
+  → T11 (Animation) — needs T10 done
+
+================================================================================
+                         TECHNOLOGY STACK
+================================================================================
+
+Language:       Python 3.10+
+UI Framework:   Dash (by Plotly)
+Charts:         Plotly
+Font:           Geist Mono (or monospace fallback)
+Theme:          Jet black (#0a0a0a) / White (#f0f0f0)
+Testing:        pytest
+Version Control: GitHub
+
+requirements.txt:
+  dash>=2.14.0
+  plotly>=5.18.0
+  pytest>=7.4.0
+
+================================================================================
