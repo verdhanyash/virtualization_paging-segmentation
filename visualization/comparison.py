@@ -356,11 +356,11 @@ def build_summary_table(all_results: Dict[str, Dict]) -> go.Figure:
                 family=_FONT,
                 size=12,
                 color=[
-                    [_ALGO_COLORS[a] for a in algos],  # algo name colour
-                    [_WHITE] * 3,                       # faults
-                    [_MUTED] * 3,                       # hits
-                    [_GRAY]  * 3,                       # rate
-                    [_WHITE] * 3,                       # best flag
+                    [_ALGO_COLORS[a] for a in algos],      # algo name colour
+                    [_WHITE] * len(algos),                 # faults
+                    [_MUTED] * len(algos),                 # hits
+                    [_GRAY]  * len(algos),                 # rate
+                    [_WHITE] * len(algos),                 # best flag
                 ],
             ),
             align=["left", "right", "right", "right", "center"],
