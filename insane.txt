@@ -2,8 +2,40 @@
      VIRTUAL MEMORY OPTIMIZATION CHALLENGE - MODULAR PROJECT STRUCTURE
 ================================================================================
 
+PROJECT STATEMENT:
+  "Create a virtual memory management tool that visualizes the behavior of
+   paging and segmentation, including page faults and demand paging. Allow
+   users to experiment with custom inputs for memory allocation, simulate
+   memory fragmentation, and evaluate page replacement algorithms like LRU
+   and Optimal."
+
 TEAM: 3 Members
 GOAL: Each task is independent — any member can pick any task
+
+================================================================================
+                     ARCHITECTURE NOTE (UPDATED)
+================================================================================
+
+The original plan specified Dash (by Plotly) for UI. The project has since
+PIVOTED to Flask + vanilla HTML/JS + Chart.js for the frontend. All UI tasks
+(T9–T13) have been rewritten below to reflect this change.
+
+The project has TWO major sections:
+  1. PAGING   — page replacement algorithms (FIFO, LRU, Optimal)
+                served at / (index.html)
+  2. SEGMENT  — segmentation & fragmentation with allocation strategies
+                (First-Fit, Best-Fit, Worst-Fit, Next-Fit)
+                served at /segmentation (segmentation.html)
+
+Each section has its own page with the same jet-black theme but a
+completely different layout appropriate to its visualization needs.
+
+Current stack:
+  - Backend:   Flask (Python)
+  - Frontend:  Vanilla HTML/CSS/JS (app/index.html, app/segmentation.html)
+  - Charts:    Chart.js (client-side) + Plotly (server-side, visualization/)
+  - Hosting:   Gunicorn + Render
+  - Testing:   pytest
 
 ================================================================================
                               FOLDER STRUCTURE
@@ -14,41 +46,41 @@ virtual-memory-optimizer/
 ├── core/                         # BACKEND LOGIC (No UI)
 │   ├── __init__.py
 │   ├── engine.py                 ← T1: Base classes (DONE ✓)
-│   ├── fifo.py                   ← T2: FIFO algorithm + Belady's anomaly
-│   ├── lru.py                    ← T3: LRU algorithm
-│   ├── optimal.py                ← T4: Optimal algorithm
-│   └── segmentation.py           ← T5: Segmentation & fragmentation
+│   ├── fifo.py                   ← T2: FIFO algorithm + Belady's anomaly (DONE ✓)
+│   ├── lru.py                    ← T3: LRU algorithm (DONE ✓)
+│   ├── optimal.py                ← T4: Optimal algorithm (DONE ✓)
+│   └── segmentation.py           ← T5: Segmentation & fragmentation (DONE ✓)
 │
-├── visualization/                # CHARTS & GRAPHS (No UI layout)
+├── visualization/                # SERVER-SIDE CHARTS (Plotly, Python)
 │   ├── __init__.py
-│   ├── charts.py                 ← T6: Individual algorithm charts
-│   ├── comparison.py             ← T7: Side-by-side algo comparison
-│   └── belady_chart.py           ← T8: Belady's anomaly visualization
+│   ├── charts.py                 ← T6: Individual algorithm charts (DONE ✓)
+│   ├── comparison.py             ← T7: Side-by-side algo comparison (DONE ✓)
+│   └── belady_chart.py           ← T8: Belady's anomaly visualization (TODO)
 │
-├── app/                          # UI COMPONENTS
-│   ├── __init__.py
-│   ├── layout.py                 ← T9: Page layout structure
-│   ├── callbacks.py              ← T10: All Dash callbacks
-│   ├── animation.py              ← T11: Step-by-step animation
-│   └── main.py                   ← T12: App entry point
+├── app/                          # FLASK UI (vanilla HTML/CSS/JS + Chart.js)
+│   ├── index.html                ← T9+T10+T11+T13: Paging UI (DONE ✓)
+│   └── segmentation.html         ← T15+T16+T17: Segmentation UI (TODO — NEW)
 │
-├── assets/
-│   └── theme.css                 ← T13: Jet black/white theme
+├── app.py                        ← T12: Flask entry point + API routes (DONE ✓)
+│                                    T18: Segmentation API routes (TODO — NEW)
+├── Procfile                      ← Render deployment (DONE ✓ via PR #9)
 │
-├── tests/                        ← T14: Unit tests for all modules
-│   ├── test_fifo.py
-│   ├── test_lru.py
-│   ├── test_optimal.py
-│   └── test_engine.py
+├── tests/                        ← T14: Unit tests
+│   ├── test_fifo.py              (DONE ✓)
+│   ├── test_lru.py               (DONE ✓)
+│   ├── test_optimal.py           (DONE ✓)
+│   ├── test_engine.py            (DONE ✓)
+│   └── test_segmentation.py      (DONE ✓)
 │
 ├── requirements.txt
-└── README.md
+├── insane.txt                    ← This file
+└── README.md                     (DONE ✓ via PR #5)
 
 ================================================================================
                          STANDARD OUTPUT FORMAT
 ================================================================================
 
-Every algorithm function MUST return this exact structure:
+PAGING — Every algorithm function MUST return this exact structure:
 
 {
   "algorithm": "FIFO",           # string: "FIFO" | "LRU" | "Optimal"
@@ -67,280 +99,121 @@ Every algorithm function MUST return this exact structure:
   "fault_positions": [0,1,2,4,6] # indexes where faults occurred
 }
 
+SEGMENTATION — simulate_fragmentation() returns a list of snapshots:
+
+[
+  {
+    "step": 0,
+    "operation": {"action": "alloc", "name": "code", "size": 200},
+    "segments": {"code": {name, base, limit, allocated_size, ...}},
+    "memory_map": [
+      {"type": "segment", "name": "code", "base": 0, ...},
+      {"type": "free", "base": 208, "size": 3888}
+    ],
+    "free_holes": [{"base": 208, "size": 3888}],
+    "fragmentation": {
+      "used": 208, "requested": 200, "internal_frag": 8,
+      "external_frag": 0, "total_free": 3888, "total": 4096,
+      "utilization": 5.08
+    },
+    "error": null
+  }
+]
+
 ================================================================================
                            TASK BREAKDOWN
 ================================================================================
 
 ------------------------------------------------------------------------------
-CORE ALGORITHMS (Pick one each — 3 people, 3 algorithms)
+CORE ALGORITHMS (ALL DONE)
 ------------------------------------------------------------------------------
 
-■ T1: Core Engine — core/engine.py [COMPLETED ✓]
-  Owner: ___________
-  Status: DONE
+■ T1: Core Engine — core/engine.py [COMPLETED ✓ — merged]
   Contains: PageTable, FramePool, translate_address(), detect_page_fault()
 
 ------------------------------------------------------------------------------
 
-■ T2: FIFO Algorithm + Belady's Anomaly — core/fifo.py
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★★☆
-
-  Functions to implement:
-  
-  1. run_fifo(reference_string: list[int], frames: int) -> dict
-     - Use collections.deque to track page insertion order
-     - On fault: evict the OLDEST page (front of queue)
-     - Return standard result dict (see format above)
-
-  2. detect_beladys_anomaly(reference_string: list[int], max_frames: int) -> dict
-     - Run FIFO for frame counts 1 to max_frames
-     - Detect where increasing frames INCREASES faults (the anomaly!)
-     - Return: {
-         "anomaly_found": bool,
-         "fault_counts": {1: n, 2: n, 3: n, ...},
-         "anomaly_at": [(3, 4), ...] # pairs where faults increased
-       }
+■ T2: FIFO Algorithm + Belady's Anomaly — core/fifo.py [COMPLETED ✓ — merged]
+  Contains:
+  1. run_fifo(reference_string, frames) → standard result dict
+  2. detect_beladys_anomaly(reference_string, max_frames) → anomaly dict
 
   Test case (Belady's classic):
     reference_string = [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]
     3 frames → 9 faults
     4 frames → 10 faults  ← ANOMALY! More frames = more faults
 
-  Copilot prompt:
-  ```
-  Create `core/fifo.py` for a virtual memory simulator.
-  
-  Requirements:
-  - Function `run_fifo(reference_string: list[int], frames: int) -> dict`
-    - Uses a queue (collections.deque) to track insertion order
-    - Evicts the page that entered memory first
-    - Returns dict: {"algorithm":"FIFO","reference_string":[],"frame_count":int,
-      "steps":[],"total_faults":int,"total_hits":int,"fault_positions":[]}
-    - Each step: {"page":int,"frames":list,"fault":bool,"evicted":int|None}
-  
-  - Function `detect_beladys_anomaly(reference_string: list[int], max_frames: int) -> dict`
-    - Runs run_fifo() for frame counts 1 through max_frames
-    - Returns {"anomaly_found": bool, "fault_counts": {1:n, 2:n...}, "anomaly_at": [(f1,f2)]}
-    - Anomaly = fault count increases when frame count increases
-  
-  No UI code. Add docstrings. Include test for [1,2,3,4,1,2,5,1,2,3,4,5].
-  ```
-
 ------------------------------------------------------------------------------
 
-■ T3: LRU Algorithm — core/lru.py
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★★☆
-
-  Functions to implement:
-  
-  1. run_lru(reference_string: list[int], frames: int) -> dict
-     - Use collections.OrderedDict to track recency
-     - On page HIT: move page to END (most recently used)
-     - On fault when full: evict FIRST item (least recently used)
-     - Return standard result dict
-
-  Key insight: OrderedDict.move_to_end(key) is your friend!
+■ T3: LRU Algorithm — core/lru.py [COMPLETED ✓ — PR #1, #2]
+  Contains:
+  1. run_lru(reference_string, frames) → standard result dict
 
   Test case:
     reference_string = [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]
     3 frames → 10 faults
 
-  Copilot prompt:
-  ```
-  Create `core/lru.py` for a virtual memory simulator.
-  
-  Requirements:
-  - Function `run_lru(reference_string: list[int], frames: int) -> dict`
-    - Use collections.OrderedDict to track recency (most recent = last)
-    - On page hit: move that page to the end
-    - On fault when full: evict first item (least recently used)
-    - Returns dict: {"algorithm":"LRU","reference_string":[],"frame_count":int,
-      "steps":[],"total_faults":int,"total_hits":int,"fault_positions":[]}
-    - Each step: {"page":int,"frames":list,"fault":bool,"evicted":int|None}
-  
-  No UI code. Add docstring with worked example for [1,2,3,4,1,2,5,1,2,3,4,5] with 3 frames.
-  ```
-
 ------------------------------------------------------------------------------
 
-■ T4: Optimal Algorithm — core/optimal.py
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★★★
-
-  Functions to implement:
-  
-  1. run_optimal(reference_string: list[int], frames: int) -> dict
-     - On fault when full: look AHEAD in reference string
-     - Evict page used FARTHEST in future (or never used again)
-     - Return standard result dict
-
-  2. _find_optimal_victim(loaded_pages: list, future_refs: list) -> int
-     - Helper: returns which page to evict
-     - If page never used again → evict it (priority)
-     - Else evict page with maximum "next use index"
+■ T4: Optimal Algorithm — core/optimal.py [COMPLETED ✓ — PR #3]
+  Contains:
+  1. run_optimal(reference_string, frames) → standard result dict
+  2. _find_optimal_victim(loaded_pages, future_refs) → page to evict
 
   Test case:
     reference_string = [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]
     3 frames → 7 faults (theoretical minimum!)
 
-  Copilot prompt:
-  ```
-  Create `core/optimal.py` for a virtual memory simulator.
-  
-  Requirements:
-  - Function `run_optimal(reference_string: list[int], frames: int) -> dict`
-    - For each fault when frames full, look ahead in reference_string
-    - Evict page whose next use is furthest in future (or never used again)
-    - Returns dict: {"algorithm":"Optimal","reference_string":[],"frame_count":int,
-      "steps":[],"total_faults":int,"total_hits":int,"fault_positions":[]}
-    - Each step: {"page":int,"frames":list,"fault":bool,"evicted":int|None}
-  
-  - Helper function `_find_optimal_victim(loaded_pages, future_refs) -> int`
-  
-  No UI code. Add docstrings. This gives theoretical minimum faults.
-  ```
+------------------------------------------------------------------------------
+
+■ T5: Segmentation & Fragmentation — core/segmentation.py [COMPLETED ✓ — PR #6]
+  Contains:
+  1. class Segment — name, base, limit, status
+  2. class SegmentTable — add_segment, translate, free_segment,
+     get_fragmentation_stats, compact (4 allocation strategies:
+     First-Fit, Best-Fit, Worst-Fit, Next-Fit)
+  3. simulate_fragmentation(operations) → list of memory snapshots
+
+------------------------------------------------------------------------------
+VISUALIZATION / GRAPHS
+------------------------------------------------------------------------------
+
+■ T6: Algorithm Charts — visualization/charts.py [COMPLETED ✓ — PR #7]
+  Contains (Plotly, server-side):
+  1. plot_faults_hits(result) → go.Figure  (bar chart)
+  2. plot_fault_progression(result) → go.Figure  (line chart)
+  3. plot_frame_heatmap(result) → go.Figure  (heatmap)
+  4. plot_hit_fault_timeline(result) → go.Figure  (timeline)
+
+  NOTE: The Flask UI (index.html) also has CLIENT-SIDE charts using
+  Chart.js that cover comparison, Belady's, and fault race visualizations.
 
 ------------------------------------------------------------------------------
 
-■ T5: Segmentation & Fragmentation — core/segmentation.py
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★★★
-
-  Classes & functions:
-  
-  1. class Segment:
-     - Fields: name, base, limit, status ("loaded"|"swapped")
-  
-  2. class SegmentTable:
-     - add_segment(name, size) → allocates at next free address
-     - translate(segment_name, offset) → physical address or SegmentFaultError
-     - free_segment(name) → creates a hole
-     - get_fragmentation_stats() → {used, internal_frag, external_frag, total}
-  
-  3. simulate_fragmentation(operations: list[dict]) -> list[dict]
-     - Input: [{"action":"alloc","name":"code","size":200}, {"action":"free","name":"code"}]
-     - Output: list of memory snapshots after each operation
-
-  Copilot prompt:
-  ```
-  Create `core/segmentation.py` for a virtual memory simulator.
-  
-  Requirements:
-  - Class `Segment` with fields: name, base, limit, status
-  - Class `SegmentTable` with methods:
-    - add_segment(name, size) → allocates at next free address
-    - translate(segment_name, offset) → physical address or raises SegmentFaultError
-    - free_segment(name) → marks as freed, creates hole
-    - get_fragmentation_stats() → {"used":int,"internal_frag":int,"external_frag":int,"total":int}
-  - Function `simulate_fragmentation(operations) -> list[dict]`
-    - Each snapshot: {"segments":[],"free_holes":[],"fragmentation":{}}
-  
-  Total memory = 4096 bytes default. No UI code.
-  ```
-
-------------------------------------------------------------------------------
-VISUALIZATION / GRAPHS (Independent tasks)
-------------------------------------------------------------------------------
-
-■ T6: Algorithm Charts — visualization/charts.py
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★★☆
-
-  Functions:
-  
-  1. build_fault_timeline(result: dict) -> go.Figure
-     - Line chart: x = step#, y = cumulative faults
-     - White dots on fault positions
-  
-  2. build_memory_heatmap(result: dict) -> go.Figure
-     - Heatmap: x = step, y = frame index, color = page number
-  
-  3. build_fault_pie(result: dict) -> go.Figure
-     - Donut chart: faults vs hits
-
-  Theme: Black background (#0a0a0a), white/gray elements, monospace font
-
-  Copilot prompt:
-  ```
-  Create `visualization/charts.py` using Plotly.
-  
-  Theme: black background (#0a0a0a), white/gray text, monospace font.
-  
-  Functions:
-  1. build_fault_timeline(result: dict) -> go.Figure
-     - Line chart: x=step, y=cumulative faults, white dots on fault positions
-  
-  2. build_memory_heatmap(result: dict) -> go.Figure
-     - Heatmap: x=step, y=frame, color=page number (white=loaded, black=empty)
-  
-  3. build_fault_pie(result: dict) -> go.Figure
-     - Donut: faults vs hits, white and gray colors
-  
-  Return go.Figure objects only. No Dash code.
-  ```
+■ T7: Algorithm Comparison — visualization/comparison.py [COMPLETED ✓]
+  Contains (Plotly, server-side):
+  1. run_all_algorithms(reference_string, frame_count) → dict
+  2. build_comparison_bar(all_results) → go.Figure  (grouped bar)
+  3. build_fault_race(all_results) → go.Figure  (cumulative lines)
+  4. build_summary_table(all_results) → go.Figure  (metrics table)
 
 ------------------------------------------------------------------------------
 
-■ T7: Algorithm Comparison — visualization/comparison.py
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★★☆
-
-  Functions:
-  
-  1. run_all_algorithms(reference_string, frame_count) -> dict
-     - Returns {"FIFO": result, "LRU": result, "Optimal": result}
-  
-  2. build_comparison_bar(all_results: dict) -> go.Figure
-     - Grouped bar chart: x = algo names, bars = faults & hits
-  
-  3. build_fault_race(all_results: dict) -> go.Figure
-     - 3 lines on one chart showing fault accumulation over time
-
-  Copilot prompt:
-  ```
-  Create `visualization/comparison.py` for a virtual memory simulator.
-  
-  Requirements:
-  - Function `run_all_algorithms(reference_string, frame_count) -> dict`
-    - Returns {"FIFO": result_dict, "LRU": result_dict, "Optimal": result_dict}
-  
-  - Function `build_comparison_bar(all_results: dict) -> go.Figure`
-    - Grouped bar: x=algorithm, y=faults (white bars), hits (gray bars)
-    - Black background, annotate values on bars
-  
-  - Function `build_fault_race(all_results: dict) -> go.Figure`
-    - 3 lines: cumulative faults per step for each algo
-    - White=FIFO, light gray=LRU, dark gray=Optimal
-  
-  Return go.Figure objects. No Dash code.
-  ```
-
-------------------------------------------------------------------------------
-
-■ T8: Belady's Anomaly Chart — visualization/belady_chart.py
-  Owner: ___________
-  Status: TODO
+■ T8: Belady's Anomaly Chart — visualization/belady_chart.py [TODO]
   Difficulty: ★☆☆
 
   Functions:
-  
+
   1. build_belady_chart(anomaly_result: dict) -> go.Figure
      - Line chart: x = frame count, y = fault count
      - Highlight anomaly points (where line goes UP instead of down)
      - Red markers on anomaly positions
+     - Normal points: white
 
   Copilot prompt:
   ```
   Create `visualization/belady_chart.py` using Plotly.
-  
+
   Requirements:
   - Function `build_belady_chart(anomaly_result: dict) -> go.Figure`
     - Input: {"fault_counts": {1:n, 2:n...}, "anomaly_at": [(3,4)...]}
@@ -348,188 +221,539 @@ VISUALIZATION / GRAPHS (Independent tasks)
     - Normal points: white
     - Anomaly points: red circles with annotation
     - Title: "Belady's Anomaly Detection"
-    - Black background theme
-  
-  Return go.Figure object.
+    - Black background (#0a0a0a) theme
+
+  Return go.Figure object. No Flask/UI code.
   ```
 
 ------------------------------------------------------------------------------
-UI COMPONENTS (Can be split further)
+PAGING UI (Flask + Vanilla JS — COMPLETE)
 ------------------------------------------------------------------------------
 
-■ T9: Page Layout — app/layout.py
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★★☆
+■ T9: Page Layout — app/index.html (HTML structure) [COMPLETED ✓ — PR #8]
+  Vanilla HTML with controls, frame boxes, history table, stats, charts.
 
-  Creates the Dash HTML structure:
-  - Left sidebar (300px): inputs, sliders, buttons
-  - Main area: frame grid display
-  - Bottom: chart area
+■ T10: Callbacks — app/index.html (JS logic) [COMPLETED ✓ — PR #8]
+  runSim(), stepFwd(), nav(), toggleAuto(), resetSim(), renderStep(),
+  renderHistory(), renderCharts(), fetchSimulationData().
 
-  Copilot prompt:
-  ```
-  Create `app/layout.py` for a Dash virtual memory simulator.
-  
-  Theme: jet black (#0a0a0a), white text (#f0f0f0), Geist Mono font, borders #333.
-  
-  Layout:
-  - Left sidebar (300px):
-    - Text input: reference_string (comma-separated)
-    - Slider: frame_count (1-10)
-    - Radio: algorithm (FIFO, LRU, Optimal)
-    - Buttons: Run, Step, Reset
-  - Main area:
-    - Div: frame-grid (shows N boxes for frames)
-    - Stats bar: faults / hits / fault rate %
-  - Bottom: div id="chart-area"
-  
-  Use Dash html/dcc components. No callbacks here — layout only.
-  All colors as inline style dicts.
-  ```
+■ T11: Animation — app/index.html (CSS + JS) [COMPLETED ✓ — PR #8]
+  Auto-play, frame fault animation, progress bar, click-to-jump pills.
+
+■ T12: App Entry Point — app.py [COMPLETED ✓ — PR #8]
+  Flask app with GET / and POST /api/simulate routes.
+
+■ T13: Theme CSS — app/index.html [COMPLETED ✓ — PR #8]
+  Geist Mono, jet black (#0a0a0a), white (#f0f0f0), CSS custom properties.
+
+------------------------------------------------------------------------------
+TESTS (COMPLETE)
+------------------------------------------------------------------------------
+
+■ T14: Unit Tests — tests/ [COMPLETED ✓ — PR #4, PR #6]
+  test_fifo.py, test_lru.py, test_optimal.py, test_engine.py,
+  test_segmentation.py
+
+==============================================================================
+==============================================================================
+
+              ███████╗███████╗ ██████╗ ███╗   ███╗███████╗███╗   ██╗████████╗
+              ██╔════╝██╔════╝██╔════╝ ████╗ ████║██╔════╝████╗  ██║╚══██╔══╝
+              ███████╗█████╗  ██║  ███╗██╔████╔██║█████╗  ██╔██╗ ██║   ██║
+              ╚════██║██╔══╝  ██║   ██║██║╚██╔╝██║██╔══╝  ██║╚██╗██║   ██║
+              ███████║███████╗╚██████╔╝██║ ╚═╝ ██║███████╗██║ ╚████║   ██║
+              ╚══════╝╚══════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝   ╚═╝
+
+         NEW TASKS — Segmentation Visualization (T15 – T18)
+
+==============================================================================
+==============================================================================
+
+These tasks cover the MISSING half of the project statement:
+  "visualizes the behavior of … segmentation … Allow users to experiment
+   with custom inputs for memory allocation, simulate memory fragmentation"
+
+The segmentation engine (core/segmentation.py, T5) is fully built but has
+ZERO frontend integration — no API routes, no UI, no visualization. These
+tasks connect it to the user.
+
+Architecture:
+  - Segmentation gets its OWN page at /segmentation (not in paging layout)
+  - Users choose an allocation strategy (First-Fit, Best-Fit, etc.)
+  - Users can enter custom operations OR use built-in preset scenarios
+  - Same jet-black / white theme as the paging page
+  - Navigation bar connects both pages
 
 ------------------------------------------------------------------------------
 
-■ T10: Callbacks — app/callbacks.py
+■ T15: Segmentation UI — Layout & Memory Map — app/segmentation.html
   Owner: ___________
   Status: TODO
   Difficulty: ★★★
 
-  All Dash callbacks:
-  - Run button → execute algorithm, store result
-  - Step button → show next step
-  - Reset → clear everything
-  - Update charts when result changes
+  A brand new HTML page for segmentation visualization (separate from
+  index.html). Layout has NO overlap with the paging simulator.
 
-------------------------------------------------------------------------------
+  Page Structure:
+  ┌─────────────────────────────────────────────────────────────┐
+  │  ┌──────────┐  ┌──────────────────┐                        │
+  │  │ ◉ Paging │  │ ◉ Segmentation   │     NAVIGATION BAR     │
+  │  └──────────┘  └──────────────────┘                        │
+  ├─────────────────────────────────────────────────────────────┤
+  │  SEGMENTATION SIMULATOR   First-Fit · Best-Fit · ...       │
+  ├──────────────────────┬──────────────────────────────────────┤
+  │  CONTROLS            │  MEMORY MAP BAR                      │
+  │                      │  ┌──┬────┬──┬─────────────────────┐  │
+  │  Strategy: [▾ tabs ] │  │A │ B  │  │  free               │  │
+  │  Memory: [4096]      │  └──┴────┴──┴─────────────────────┘  │
+  │  Block:  [16]        │                                      │
+  │                      │  SEGMENT TABLE                       │
+  │  Segment: [name]     │  ┌──────┬──────┬──────┬──────────┐  │
+  │  Size:    [bytes]    │  │Name  │Base  │Limit │Int.Frag  │  │
+  │  [+ Allocate]        │  ├──────┼──────┼──────┼──────────┤  │
+  │                      │  │code  │0     │200   │8         │  │
+  │  Free: [▾ dropdown ] │  │stack │208   │500   │4         │  │
+  │  [✕ Free Segment]   │  └──────┴──────┴──────┴──────────┘  │
+  │                      │                                      │
+  │  [⟳ Compact]        │  FREE HOLES TABLE                    │
+  │  [↺ Reset]           │  ┌──────┬──────┐                     │
+  │                      │  │Base  │Size  │                     │
+  │  ── Presets ──       │  ├──────┼──────┤                     │
+  │  [Frag Demo]         │  │512   │128   │                     │
+  │  [Compact Demo]      │  └──────┴──────┘                     │
+  │  [Memory Full]       │                                      │
+  │  [Best vs Worst]     │  FRAGMENTATION STATS                 │
+  │                      │  ┌──────────┬──────────┬──────────┐  │
+  │                      │  │Used      │Int.Frag  │Ext.Frag  │  │
+  │                      │  │708 B     │12 B      │128 B     │  │
+  │                      │  └──────────┴──────────┴──────────┘  │
+  ├──────────────────────┴──────────────────────────────────────┤
+  │  OPERATION HISTORY (scrollable timeline)                    │
+  │  Step 1: alloc code(200) → OK                              │
+  │  Step 2: alloc stack(500) → OK                             │
+  │  Step 3: free code → hole at [0, 208)                      │
+  │  Step 4: compact → 1 hole eliminated, 208 B recovered     │
+  └─────────────────────────────────────────────────────────────┘
 
-■ T11: Animation — app/animation.py
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★★★
+  Components to build:
 
-  Step-by-step animation logic:
-  - Auto-play mode with interval
-  - Frame highlighting on page fault
-  - Smooth transitions
+  1. NAVIGATION BAR
+     - Links to Paging (/) and Segmentation (/segmentation)
+     - Active page highlighted
+     - Same nav bar ALSO added to index.html (paging page)
 
-------------------------------------------------------------------------------
+  2. STRATEGY PICKER
+     - Tabs or buttons: First-Fit | Best-Fit | Worst-Fit | Next-Fit
+     - Styled like the algorithm tabs in index.html (FIFO/LRU/Optimal)
+     - Selecting a strategy does NOT reset — it changes the strategy for
+       the NEXT allocation only (so users can experiment mid-session)
 
-■ T12: App Entry Point — app/main.py
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★☆☆
+  3. CONFIGURATION INPUTS
+     - Total memory size (default: 4096 bytes)
+     - Block alignment size (default: 16 bytes)
+     - These are locked once the first segment is allocated
+       (reset to change them)
 
-  Just imports and runs the Dash app.
+  4. ALLOCATION CONTROLS
+     - Segment name text input
+     - Segment size number input
+     - "Allocate" button — calls the API, updates memory map
+     - "Free Segment" dropdown listing current segments + free button
+     - "Compact" button — triggers compaction
+     - "Reset" button — clears everything
 
-------------------------------------------------------------------------------
+  5. PRESET SCENARIOS (built-in data so user doesn't need to think)
+     - Preset buttons that auto-fill and execute a sequence of operations
+     - 4 presets:
 
-■ T13: Theme CSS — assets/theme.css
-  Owner: ___________
-  Status: TODO
-  Difficulty: ★☆☆
+     a) "Fragmentation Demo"
+        ops: alloc A(200) → alloc B(300) → alloc C(400) →
+             free B → alloc D(100)
+        Shows: hole creation, D fits inside B's hole (or not,
+        depending on strategy)
+
+     b) "Compaction Demo"
+        ops: alloc A(500) → alloc B(500) → alloc C(500) →
+             free A → free C → compact
+        Shows: scattered holes eliminated by sliding segments left
+
+     c) "Memory Full"
+        ops: alloc A(1000) → alloc B(1000) → alloc C(1000) →
+             alloc D(1000) → alloc E(500)
+        Shows: E fails — "no hole fits" error, demonstrates
+        external fragmentation even when total free > 0
+
+     d) "Best vs Worst"
+        ops: alloc A(200) → alloc B(800) → free A → free B →
+             alloc C(150)
+        Shows: run with Best-Fit (picks 200-byte hole) vs
+        Worst-Fit (picks 800-byte hole) — different outcomes
+
+  Theme: Same CSS custom properties as index.html
+    --bg: #0a0a0a, --bg2: #111, --t: #f0f0f0, --b: #252525
+    Geist Mono font, panels with .pnl class, same button styles
 
   Copilot prompt:
   ```
-  Create `assets/theme.css` for a Dash app.
-  
+  Create `app/segmentation.html` for a virtual memory segmentation
+  simulator using Flask.
+
   Requirements:
-  - Import Geist Mono or fallback to 'Courier New', monospace
-  - body: background #0a0a0a, color #f0f0f0
-  - inputs/dropdowns: background #111, border 1px solid #333, color #f0f0f0
-  - buttons: background #f0f0f0, color #0a0a0a, padding 8px 20px
-  - .frame-box: 48px square, border #333, flexbox centered
-  - .frame-fault: border 2px solid white, background #1a1a1a
-  - .frame-loaded: background #f0f0f0, color #0a0a0a
-  - .frame-empty: background #111, color #555
+  - Navigation bar at top: links to Paging (/) and Segmentation
+    (/segmentation), active state highlighted
+  - Left controls panel:
+    - Strategy tabs: First-Fit | Best-Fit | Worst-Fit | Next-Fit
+    - Memory size input (default 4096), block size input (default 16)
+    - Segment name + size inputs, Allocate button
+    - Free segment dropdown + button
+    - Compact button, Reset button
+    - 4 preset scenario buttons with pre-built operations
+  - Right main area:
+    - Horizontal memory map bar (colored blocks = segments, dark = holes,
+      gray = trailing free). Each block labeled with name + size.
+    - Segment table: Name, Base, Limit, Allocated, Internal Frag
+    - Free holes table: Base, Size
+    - Fragmentation stats: Used, Internal Frag, External Frag, Utilization%
+  - Bottom: scrollable operation history timeline
+  - Theme: jet black (#0a0a0a), white text (#f0f0f0), Geist Mono font
+  - All logic via vanilla JS calling POST /api/segmentation
+  - No frameworks, no React, no Dash. Pure HTML/CSS/JS.
   ```
 
 ------------------------------------------------------------------------------
 
-■ T14: Unit Tests — tests/
+■ T16: Segmentation UI — JS Logic & Interactivity
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★★
+
+  All JavaScript logic inside segmentation.html <script> tag.
+  (Same pattern as T10 — callbacks in index.html)
+
+  Functions to implement:
+
+  1. State Management
+     - Track current strategy, memory config, operations list
+     - Track simulation result (snapshots from API)
+
+  2. API Interaction
+     - fetchSegmentation(operations, strategy, memory, blockSize)
+       → calls POST /api/segmentation
+       → returns list of snapshots
+
+  3. Rendering Functions
+     - renderMemoryMap(snapshot) → horizontal stacked bar
+       · Each segment gets a UNIQUE color (use HSL rotation based on
+         segment index for auto-assigned distinct colors)
+       · Holes shown as dark gaps with dashed borders
+       · Trailing free space shown as lighter gray
+       · Labels: segment name + size inside each block
+       · Proportional widths based on actual byte sizes
+
+     - renderSegmentTable(snapshot) → table with columns:
+       Name | Base | Limit | Allocated | Internal Frag
+       Right-aligned numbers, left-aligned names
+
+     - renderHolesTable(snapshot) → table with columns:
+       Base | Size
+       Right-aligned numbers
+
+     - renderFragStats(snapshot) → stats boxes:
+       Used | Free | Internal Frag | External Frag | Utilization %
+       Color-coded: internal frag and external frag highlighted
+
+     - renderHistory(operations, snapshots) → scrollable list
+       Each entry: step number, operation description, result/error
+       Color-coded: alloc = neutral, free = muted, compact = accent,
+       error = red
+
+  4. Action Handlers
+     - allocSegment() → reads name + size inputs, adds to operations,
+       calls API, re-renders everything
+     - freeSegment() → reads dropdown, adds free op, calls API
+     - compactMemory() → adds compact op, calls API
+     - resetAll() → clears everything, re-enables config inputs
+     - loadPreset(presetName) → populates operations from preset,
+       runs simulation, renders all steps
+
+  5. Preset Scenario Data (hardcoded in JS)
+     - PRESETS object with 4 named scenarios (see T15 above)
+     - Each preset = { name, description, operations[] }
+
+  Copilot prompt:
+  ```
+  Add JavaScript to `app/segmentation.html` <script> tag.
+
+  Requirements:
+  - fetchSegmentation(ops, strategy, totalMem, blockSize) → calls
+    POST /api/segmentation, returns JSON snapshots
+  - renderMemoryMap(snapshot) → horizontal bar with colored segment
+    blocks, dark holes, gray free space. Use HSL colors per segment.
+  - renderSegmentTable(snapshot) → HTML table of active segments
+  - renderHolesTable(snapshot) → HTML table of free holes
+  - renderFragStats(snapshot) → stat boxes for used/free/int_frag/ext_frag
+  - renderHistory(ops, snapshots) → scrollable operation log
+  - allocSegment(), freeSegment(), compactMemory(), resetAll()
+  - loadPreset(name) → runs a preset scenario automatically
+  - 4 presets: Fragmentation Demo, Compaction Demo, Memory Full,
+    Best vs Worst (with hardcoded operation sequences)
+
+  No frameworks. Vanilla JS only.
+  ```
+
+------------------------------------------------------------------------------
+
+■ T17: Segmentation UI — Memory Map Visualization & Animations
   Owner: ___________
   Status: TODO
   Difficulty: ★★☆
 
-  Test files for each algorithm:
-  - test_fifo.py: verify fault counts, Belady's anomaly detection
-  - test_lru.py: verify LRU eviction order
-  - test_optimal.py: verify minimum faults
-  - test_engine.py: verify PageTable, FramePool
+  Visual polish for the segmentation page.
+
+  1. MEMORY MAP BAR
+     - Horizontal bar representing total memory (4096 bytes)
+     - Segment blocks:
+       · Width proportional to allocated_size
+       · Unique color per segment (HSL rotation: hue = index * 47°)
+       · Label inside: segment name + size in bytes
+       · Hover tooltip: base address, limit, allocated, internal frag
+     - Holes between segments:
+       · Dark background (#161616) with dashed border
+       · Size label inside (e.g., "128 B")
+     - Trailing free space:
+       · Lighter gray (#1c1c1c)
+       · "Free: 2048 B" label
+
+  2. ANIMATIONS (CSS)
+     - New segment: scale-in animation (like .newly in index.html)
+     - Free segment: fade-out animation
+     - Compact: slide-left animation on moved segments
+     - Error: shake animation on controls panel
+
+  3. FRAGMENTATION STATS
+     - Show a stacked progress bar:
+       [  used (white)  |  int.frag (gray)  |  ext.frag (striped)  |  free  ]
+     - Percentage labels below each section
+     - Updates live as operations are performed
+
+  Copilot prompt:
+  ```
+  Add CSS animations and memory map visualization to segmentation.html.
+
+  Requirements:
+  - Horizontal memory map bar: segments as colored blocks (HSL rotation),
+    holes as dark dashed blocks, trailing free as gray
+  - Block widths proportional to byte sizes
+  - Labels inside blocks: name + size
+  - Stacked fragmentation bar: used | int_frag | ext_frag | free
+  - CSS animations: scale-in for new segments, fade-out for freed,
+    slide-left for compaction, shake for errors
+  - Hover tooltips showing full segment details
+  - Same theme variables as index.html (--bg, --t, --b, etc.)
+  ```
+
+------------------------------------------------------------------------------
+
+■ T18: Segmentation API Routes — app.py
+  Owner: ___________
+  Status: TODO
+  Difficulty: ★★☆
+
+  Add new Flask routes to app.py for the segmentation simulator.
+
+  Routes to add:
+
+  1. GET /segmentation
+     - Serves app/segmentation.html
+
+  2. POST /api/segmentation
+     - Accepts JSON:
+       {
+         "operations": [
+           {"action": "alloc", "name": "code", "size": 200},
+           {"action": "free", "name": "code"},
+           {"action": "compact"}
+         ],
+         "strategy": "first_fit",     // one of: first_fit, best_fit,
+                                      //         worst_fit, next_fit
+         "total_memory": 4096,        // optional, default 4096
+         "block_size": 16             // optional, default 16
+       }
+     - Calls simulate_fragmentation() from core/segmentation.py
+     - Returns JSON: list of snapshots (see standard output format above)
+     - Error handling: invalid strategy, bad operations, etc.
+
+  3. Update navigation
+     - Both index.html and segmentation.html get a shared nav bar
+     - Paging links to /
+     - Segmentation links to /segmentation
+
+  Copilot prompt:
+  ```
+  Update `app.py` to add segmentation routes.
+
+  Requirements:
+  - Import simulate_fragmentation from core.segmentation
+  - GET /segmentation → render_template('segmentation.html')
+  - POST /api/segmentation → accepts operations, strategy, total_memory,
+    block_size. Calls simulate_fragmentation(). Returns JSON snapshots.
+  - Validate strategy is one of: first_fit, best_fit, worst_fit, next_fit
+  - Return 400 on invalid input with clear error messages
+  ```
 
 ================================================================================
-                        TASK ASSIGNMENT MATRIX
+                        COMPLETION STATUS SUMMARY
 ================================================================================
 
-Pick tasks so each person has ~equal work:
+  ┌──────┬──────────────────────────────────────────────────────┬──────────┐
+  │ TASK │ DESCRIPTION                                          │ STATUS   │
+  ├──────┼──────────────────────────────────────────────────────┼──────────┤
+  │      │ ── PAGING (CORE) ──                                  │          │
+  │ T1   │ Core Engine (engine.py)                              │ DONE ✓   │
+  │ T2   │ FIFO + Belady's Anomaly (fifo.py)                   │ DONE ✓   │
+  │ T3   │ LRU Algorithm (lru.py)                              │ DONE ✓   │
+  │ T4   │ Optimal Algorithm (optimal.py)                      │ DONE ✓   │
+  │ T5   │ Segmentation Engine (segmentation.py)               │ DONE ✓   │
+  │      │                                                      │          │
+  │      │ ── VISUALIZATION ──                                  │          │
+  │ T6   │ Algorithm Charts (charts.py)                        │ DONE ✓   │
+  │ T7   │ Algorithm Comparison (comparison.py)                │ DONE ✓   │
+  │ T8   │ Belady's Anomaly Chart (belady_chart.py)            │ TODO     │
+  │      │                                                      │          │
+  │      │ ── PAGING UI ──                                      │          │
+  │ T9   │ Paging Layout (index.html)                          │ DONE ✓   │
+  │ T10  │ Paging Callbacks (index.html JS)                    │ DONE ✓   │
+  │ T11  │ Paging Animation (index.html CSS+JS)                │ DONE ✓   │
+  │ T12  │ App Entry Point (app.py)                            │ DONE ✓   │
+  │ T13  │ Theme CSS (index.html)                              │ DONE ✓   │
+  │      │                                                      │          │
+  │      │ ── TESTS ──                                          │          │
+  │ T14  │ Unit Tests (tests/)                                 │ DONE ✓   │
+  │      │                                                      │          │
+  │      │ ── SEGMENTATION UI (NEW) ──                          │          │
+  │ T15  │ Segmentation Layout (segmentation.html)             │ TODO     │
+  │ T16  │ Segmentation JS Logic (segmentation.html)           │ TODO     │
+  │ T17  │ Segmentation Animations (segmentation.html)         │ TODO     │
+  │ T18  │ Segmentation API Routes (app.py)                    │ TODO     │
+  └──────┴──────────────────────────────────────────────────────┴──────────┘
 
-┌─────────────┬────────────────────────────────────────────────────────────┐
-│ PERSON 1    │ T2 (FIFO + Belady's) + T8 (Belady chart) + T13 (CSS)       │
-├─────────────┼────────────────────────────────────────────────────────────┤
-│ PERSON 2    │ T3 (LRU) + T6 (Charts) + T9 (Layout)                       │
-├─────────────┼────────────────────────────────────────────────────────────┤
-│ PERSON 3    │ T4 (Optimal) + T7 (Comparison) + T10 (Callbacks)           │
-├─────────────┼────────────────────────────────────────────────────────────┤
-│ SHARED      │ T5 (Segmentation), T11 (Animation), T14 (Tests)            │
-└─────────────┴────────────────────────────────────────────────────────────┘
+  Completed: 13/18    Remaining: 5 (T8, T15, T16, T17, T18)
+
+  PROJECT STATEMENT COVERAGE:
+  ✓ "visualizes the behavior of paging"          — T9-T13 (DONE)
+  → "visualizes the behavior of segmentation"    — T15-T17 (TODO)
+  ✓ "page faults and demand paging"              — T9-T11 (DONE)
+  → "custom inputs for memory allocation"        — T15-T16 (TODO)
+  → "simulate memory fragmentation"              — T15-T17 (TODO)
+  ✓ "evaluate page replacement algorithms"       — T2-T4, T9 (DONE)
 
 ================================================================================
-                          GIT WORKFLOW
+                     REMAINING WORK — WHAT TO CONTRIBUTE
+================================================================================
+
+  5 tasks remain:
+
+  VISUALIZATION (server-side):
+  1. T8:  visualization/belady_chart.py  (★☆☆ — ~40 lines)
+
+  SEGMENTATION UI (the big new feature):
+  2. T15: Segmentation layout + controls  (★★★ — HTML/CSS)
+  3. T16: Segmentation JS logic           (★★★ — API calls, rendering)
+  4. T17: Memory map visualization        (★★☆ — CSS animations, bar chart)
+  5. T18: Segmentation API routes          (★★☆ — Flask endpoint)
+
+  Suggested implementation order:
+    T18 (API) → T15 (layout) → T16 (JS logic) → T17 (animations) → T8
+
+  T18 must be done first because the UI needs the API to function.
+  T8 is independent and can be done anytime.
+
+================================================================================
+                       TECHNOLOGY STACK (UPDATED)
+================================================================================
+
+Language:        Python 3.10+
+Web Framework:   Flask (replaced Dash)
+Server Charts:   Plotly (visualization/ modules)
+Client Charts:   Chart.js 4.4.1 (in index.html, segmentation.html)
+Font:            Geist Mono (Google Fonts, with monospace fallback)
+Theme:           Jet black (#0a0a0a) / White (#f0f0f0)
+Testing:         pytest
+Deployment:      Gunicorn + Render
+Version Control: GitHub
+
+requirements.txt:
+  flask==3.1.0
+  gunicorn==23.0.0
+  pytest==8.3.4
+  plotly==5.20.0
+
+================================================================================
+                           GIT WORKFLOW
 ================================================================================
 
 Branches (minimum 7 commits total):
 
 main
-├── feature/fifo-algorithm        → Person 1
-├── feature/lru-algorithm         → Person 2
-├── feature/optimal-algorithm     → Person 3
-├── feature/visualization         → After algos merged
-├── feature/ui-layout             → After algos merged
-├── feature/integration           → Final merge
-└── feature/testing               → Add tests
+├── feature/fifo-algorithm           → MERGED (PR N/A — pre-existing)
+├── feature/lru-algorithm            → MERGED (PR #1, #2)
+├── feature/optimal-algorithm        → MERGED (PR #3)
+├── feature/segmentation-engine      → MERGED (PR #6)
+├── charts-visualization             → MERGED (PR #7)
+├── feature/frontend-integration     → MERGED (PR #8)
+├── chore/render-deployment          → MERGED (PR #9)
+├── docs/readme-update               → MERGED (PR #5)
+├── feature/testing                  → MERGED (PR #4)
+├── feature/comparison-charts        → IN PROGRESS (T7 done, T8 TODO)
+└── feature/segmentation-ui          → TODO (T15, T16, T17, T18)
 
 Commit message format:
   feat: add FIFO algorithm with Belady's anomaly detection
+  feat: add segmentation UI with memory map visualization
+  feat: add segmentation API routes for alloc/free/compact
   fix: correct LRU eviction order
-  style: apply jet black theme to layout
+  style: apply jet black theme to segmentation page
   test: add unit tests for optimal algorithm
-  docs: update README with usage instructions
+  docs: update README with segmentation usage
 
 ================================================================================
                     DEPENDENCIES BETWEEN TASKS
 ================================================================================
 
 Independent (can start immediately):
-  ✓ T2 (FIFO) — no dependencies
-  ✓ T3 (LRU) — no dependencies
-  ✓ T4 (Optimal) — no dependencies
-  ✓ T5 (Segmentation) — no dependencies
-  ✓ T13 (CSS) — no dependencies
+  ✓ T2 (FIFO) — DONE
+  ✓ T3 (LRU) — DONE
+  ✓ T4 (Optimal) — DONE
+  ✓ T5 (Segmentation) — DONE
+  ✓ T13 (CSS) — DONE
+  → T8 (Belady chart) — TODO, no dependencies, CAN START
 
 Requires algorithms complete:
-  → T6 (Charts) — needs T2/T3/T4 done
-  → T7 (Comparison) — needs T2/T3/T4 done
-  → T8 (Belady chart) — needs T2 done
+  ✓ T6 (Charts) — DONE
+  ✓ T7 (Comparison) — DONE
 
-Requires charts + layout:
-  → T10 (Callbacks) — needs T6/T9 done
-  → T11 (Animation) — needs T10 done
+Requires segmentation engine (T5) complete:
+  → T18 (Seg API) — TODO, needs T5 (DONE), CAN START
+  → T15 (Seg layout) — TODO, needs T18 (API must exist first)
+  → T16 (Seg JS) — TODO, needs T15 + T18
+  → T17 (Seg animations) — TODO, needs T15 + T16
+
+Recommended order:
+  T18 → T15 → T16 → T17
+  (T8 can be done in parallel at any point)
 
 ================================================================================
-                         TECHNOLOGY STACK
+                     CLOSED PULL REQUESTS (REFERENCE)
 ================================================================================
 
-Language:       Python 3.10+
-UI Framework:   Dash (by Plotly)
-Charts:         Plotly
-Font:           Geist Mono (or monospace fallback)
-Theme:          Jet black (#0a0a0a) / White (#f0f0f0)
-Testing:        pytest
-Version Control: GitHub
-
-requirements.txt:
-  dash>=2.14.0
-  plotly>=5.18.0
-  pytest>=7.4.0
+  PR #1  — Implemented LRU Page Replacement using OrderedDict (rajeevkrsingh17)
+  PR #2  — LRU algorithm (rajeevkrsingh17)
+  PR #3  — feat: implement Optimal page replacement algorithm (Aamod007)
+  PR #4  — test: add unit tests for FIFO, LRU, Engine (Aamod007)
+  PR #5  — docs: comprehensive README based on insane.txt (Aamod007)
+  PR #6  — feat(core): Segmentation Engine with allocation strategies (verdhanyash)
+  PR #7  — T6: algorithm charts — faults, progression, heatmap, timeline (rajeevkrsingh17)
+  PR #8  — feat: integrate frontend UI and establish folder structure (Aamod007)
+  PR #9  — chore: add configuration files for Render deployment (Aamod007)
 
 ================================================================================
