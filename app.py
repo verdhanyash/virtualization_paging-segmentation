@@ -11,6 +11,18 @@ flask_app = Flask(__name__, template_folder='app', static_folder='app', static_u
 def index():
     return render_template('index.html')
 
+@flask_app.route('/fifo')
+def fifo_page():
+    return render_template('fifo.html')
+
+@flask_app.route('/lru')
+def lru_page():
+    return render_template('lru.html')
+
+@flask_app.route('/optimal')
+def optimal_page():
+    return render_template('optimal.html')
+
 @flask_app.route('/api/simulate', methods=['POST'])
 def simulate():
     data = request.json
