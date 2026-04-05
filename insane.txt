@@ -55,7 +55,7 @@ virtual-memory-optimizer/
 │   ├── __init__.py
 │   ├── charts.py                 ← T6: Individual algorithm charts (DONE ✓)
 │   ├── comparison.py             ← T7: Side-by-side algo comparison (DONE ✓)
-│   └── belady_chart.py           ← T8: Belady's anomaly visualization (TODO)
+│   └── belady_chart.py           ← T8: Belady's anomaly visualization (DONE ✓)
 │
 ├── app/                          # FLASK UI (vanilla HTML/CSS/JS + Chart.js)
 │   ├── index.html                ← T9+T10+T11+T13: Paging UI (DONE ✓)
@@ -199,7 +199,7 @@ VISUALIZATION / GRAPHS
 
 ------------------------------------------------------------------------------
 
-■ T8: Belady's Anomaly Chart — visualization/belady_chart.py [TODO]
+■ T8: Belady's Anomaly Chart — visualization/belady_chart.py [COMPLETED ✓]
   Difficulty: ★☆☆
 
   Functions:
@@ -618,7 +618,7 @@ Architecture:
   │      │ ── VISUALIZATION ──                                  │          │
   │ T6   │ Algorithm Charts (charts.py)                        │ DONE ✓   │
   │ T7   │ Algorithm Comparison (comparison.py)                │ DONE ✓   │
-  │ T8   │ Belady's Anomaly Chart (belady_chart.py)            │ TODO     │
+  │ T8   │ Belady's Anomaly Chart (belady_chart.py)            │ DONE ✓   │
   │      │                                                      │          │
   │      │ ── PAGING UI ──                                      │          │
   │ T9   │ Paging Layout (index.html)                          │ DONE ✓   │
@@ -637,7 +637,7 @@ Architecture:
   │ T18  │ Segmentation API Routes (app.py)                    │ TODO     │
   └──────┴──────────────────────────────────────────────────────┴──────────┘
 
-  Completed: 13/18    Remaining: 5 (T8, T15, T16, T17, T18)
+  Completed: 14/18    Remaining: 4 (T15, T16, T17, T18)
 
   PROJECT STATEMENT COVERAGE:
   ✓ "visualizes the behavior of paging"          — T9-T13 (DONE)
@@ -651,22 +651,18 @@ Architecture:
                      REMAINING WORK — WHAT TO CONTRIBUTE
 ================================================================================
 
-  5 tasks remain:
-
-  VISUALIZATION (server-side):
-  1. T8:  visualization/belady_chart.py  (★☆☆ — ~40 lines)
+  4 tasks remain:
 
   SEGMENTATION UI (the big new feature):
-  2. T15: Segmentation layout + controls  (★★★ — HTML/CSS)
-  3. T16: Segmentation JS logic           (★★★ — API calls, rendering)
-  4. T17: Memory map visualization        (★★☆ — CSS animations, bar chart)
-  5. T18: Segmentation API routes          (★★☆ — Flask endpoint)
+  1. T15: Segmentation layout + controls  (★★★ — HTML/CSS)
+  2. T16: Segmentation JS logic           (★★★ — API calls, rendering)
+  3. T17: Memory map visualization        (★★☆ — CSS animations, bar chart)
+  4. T18: Segmentation API routes          (★★☆ — Flask endpoint)
 
   Suggested implementation order:
-    T18 (API) → T15 (layout) → T16 (JS logic) → T17 (animations) → T8
+    T18 (API) → T15 (layout) → T16 (JS logic) → T17 (animations)
 
   T18 must be done first because the UI needs the API to function.
-  T8 is independent and can be done anytime.
 
 ================================================================================
                        TECHNOLOGY STACK (UPDATED)
@@ -704,7 +700,7 @@ main
 ├── chore/render-deployment          → MERGED (PR #9)
 ├── docs/readme-update               → MERGED (PR #5)
 ├── feature/testing                  → MERGED (PR #4)
-├── feature/comparison-charts        → IN PROGRESS (T7 done, T8 TODO)
+├── feature/comparison-charts        → DONE (T7, T8 complete)
 └── feature/segmentation-ui          → TODO (T15, T16, T17, T18)
 
 Commit message format:
@@ -726,7 +722,7 @@ Independent (can start immediately):
   ✓ T4 (Optimal) — DONE
   ✓ T5 (Segmentation) — DONE
   ✓ T13 (CSS) — DONE
-  → T8 (Belady chart) — TODO, no dependencies, CAN START
+  ✓ T8 (Belady chart) — DONE
 
 Requires algorithms complete:
   ✓ T6 (Charts) — DONE
