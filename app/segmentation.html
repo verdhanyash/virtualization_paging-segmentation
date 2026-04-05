@@ -1,46 +1,574 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Segmentation</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-        }
-        nav {
-            margin-bottom: 20px;
-        }
-        nav a {
-            margin-right: 15px;
-            text-decoration: none;
-            font-weight: bold;
-            color: black;
-        }
-        .container {
-            padding: 20px;
-            border: 1px solid #ccc;
-            width: 400px;
-        }
-    </style>
-</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Segmentation &mdash; Virtual Memory Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--bg2:#111;--bg3:#161616;--bg4:#1c1c1c;
+  --b:#252525;--b2:#333;--b3:#444;
+  --t:#f0f0f0;--t2:#777;--t3:#444;--t4:#2a2a2a;
+  --white:#f0f0f0;
+}
+body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh}
 
+/* Nav */
+nav{padding:16px 40px;border-bottom:1px solid var(--b);display:flex;gap:6px;align-items:center}
+nav a{color:var(--t2);text-decoration:none;font-size:11px;padding:6px 14px;border-radius:3px;letter-spacing:.05em;text-transform:uppercase;transition:all .15s}
+nav a:hover{color:var(--t)}
+nav a.active{color:var(--t);background:var(--bg3);border:1px solid var(--b)}
+nav .sep{color:var(--t4);margin:0 2px}
+
+.app{max-width:1120px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:14px}
+
+/* Header */
+.hdr{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--b)}
+.hdr h1{font-size:14px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.algo-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:3px;font-size:10px;color:var(--white);text-transform:uppercase;letter-spacing:.1em}
+
+/* Panel */
+.pnl{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:16px}
+.sec{font-size:9px;color:var(--t2);letter-spacing:.12em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--b);margin-bottom:14px}
+
+/* Description */
+.algo-desc{background:var(--bg3);border-radius:3px;padding:16px 20px;font-size:12px;line-height:1.7;color:var(--t2);border-left:3px solid var(--b2)}
+.algo-desc strong{color:var(--t)}
+.algo-desc code{background:var(--bg);padding:2px 6px;border-radius:2px;font-size:11px;color:var(--t)}
+
+/* Controls */
+.ctrl-row{display:flex;gap:16px;align-items:end;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.grow{flex:1;min-width:160px}
+.lbl{font-size:9px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase}
+input[type=text],input[type=number]{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:8px 10px;font-family:inherit;font-size:13px;border-radius:2px;outline:none;width:100%}
+input[type=text]:focus,input[type=number]:focus{border-color:var(--b3)}
+select{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:8px 10px;font-family:inherit;font-size:13px;border-radius:2px;outline:none}
+
+button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;border:none}
+.bp{background:var(--white);color:#0a0a0a}
+.bp:hover{opacity:.85}
+.bs{background:transparent;color:var(--t);border:1px solid var(--b2)}
+.bs:hover:not(:disabled){border-color:var(--b3)}
+.bd{background:transparent;color:var(--t2);border:1px solid var(--b)}
+.bd:hover:not(:disabled){border-color:var(--b3);color:var(--t)}
+button:disabled{opacity:.28;cursor:not-allowed}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Strategy Tabs */
+.algo-tabs{display:flex}
+.atab{padding:7px 16px;background:transparent;border:1px solid var(--b2);color:var(--t2);font-family:inherit;font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.atab:not(:first-child){border-left:none}
+.atab:first-child{border-radius:2px 0 0 2px}
+.atab:last-child{border-radius:0 2px 2px 0}
+.atab.on{background:var(--white);color:#0a0a0a;border-color:var(--white)}
+.atab:hover:not(.on){border-color:var(--b3);color:var(--t)}
+
+/* Memory Map */
+.memory-map{border:1px solid var(--b2);height:54px;width:100%;display:flex;background:var(--bg4);border-radius:3px;overflow:hidden;position:relative}
+.mem-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;overflow:hidden;white-space:nowrap;text-shadow:1px 1px 2px rgba(0,0,0,.8);border-right:1px solid rgba(0,0,0,.3);color:white;transition:width .3s ease}
+.mem-hole{background:var(--bg3);background-image:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(255,255,255,.03) 8px,rgba(255,255,255,.03) 16px);border-right:1px dashed var(--b2);color:var(--t3);text-shadow:none}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.sc{background:var(--bg3);border-radius:3px;padding:12px 14px;text-align:center}
+.sc-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+.sc-val{font-size:22px;font-weight:600}
+.sv-warn{color:#ff9800}
+.sv-err{color:#f44336}
+
+/* Tables */
+.tbl-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}
+th{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;font-weight:400;text-align:left;padding:8px;border-bottom:1px solid var(--b)}
+td{padding:8px;border-bottom:1px solid var(--b)}
+td.num,th.num{text-align:right}
+
+/* History */
+.hist-entry{display:flex;padding:8px 0;border-bottom:1px solid var(--b);font-size:12px;gap:12px}
+.hist-entry .step-num{width:36px;color:var(--t3);flex-shrink:0}
+.hist-entry .step-op{flex:1}
+.hist-entry .step-res{width:90px;text-align:right;flex-shrink:0}
+.hist-entry.is-err{color:#f44336}
+.hist-scroll{max-height:200px;overflow-y:auto}
+
+/* Empty */
+.empty{text-align:center;padding:28px 0;color:var(--t3);font-size:11px}
+
+/* Presets */
+.preset-row{display:flex;gap:6px;flex-wrap:wrap}
+
+@media(max-width:720px){
+  .ctrl-row{flex-direction:column}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .tbl-row{grid-template-columns:1fr}
+}
+</style>
+</head>
 <body>
 
-    <!-- NAVBAR -->
-    <nav>
-        <a href="/">Paging</a>
-        <a href="/segmentation">Segmentation</a>
-    </nav>
+<nav>
+  <a href="/">Overview</a>
+  <span class="sep">|</span>
+  <a href="/fifo">FIFO</a>
+  <a href="/lru">LRU</a>
+  <a href="/optimal">Optimal</a>
+  <span class="sep">|</span>
+  <a href="/segmentation" class="active">Segmentation</a>
+</nav>
 
-    <!-- CONTENT -->
-    <div class="container">
-        <h2>Segmentation Simulator</h2>
-        <p>This page is connected to the segmentation API.</p>
+<div class="app">
 
-        <p><b>API Endpoint:</b> /api/segmentation</p>
+  <div class="hdr">
+    <h1>Segmentation &mdash; Memory Allocation Simulator</h1>
+    <span class="algo-badge">&#9679; Variable-Size Segments</span>
+  </div>
 
-        <p>Status: <span style="color:green;">Working ✅</span></p>
+  <!-- Description -->
+  <div class="algo-desc">
+    <strong>How segmentation works:</strong> Memory is divided into variable-size <strong>segments</strong> (code, stack, heap, etc.). When allocating, the OS finds a suitable free hole using a <strong>placement strategy</strong> (First-Fit, Best-Fit, Worst-Fit, or Next-Fit). Freeing a segment creates a hole. Over time, holes fragment memory &mdash; <strong>external fragmentation</strong>. Block alignment causes <strong>internal fragmentation</strong> (wasted bytes). <code>Compaction</code> slides segments left to merge all holes.
+  </div>
+
+  <!-- Controls -->
+  <div class="pnl">
+    <div class="sec">Controls</div>
+    <div class="ctrl-row">
+      <div class="field">
+        <span class="lbl">Strategy</span>
+        <div class="algo-tabs" id="strategy-tabs">
+          <button class="atab on" data-strategy="first_fit" onclick="setStrategy('first_fit')">First-Fit</button>
+          <button class="atab" data-strategy="best_fit" onclick="setStrategy('best_fit')">Best-Fit</button>
+          <button class="atab" data-strategy="worst_fit" onclick="setStrategy('worst_fit')">Worst-Fit</button>
+          <button class="atab" data-strategy="next_fit" onclick="setStrategy('next_fit')">Next-Fit</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl">Total Memory</span>
+        <input type="number" id="inp-total-mem" value="4096" style="width:90px">
+      </div>
+      <div class="field">
+        <span class="lbl">Block Size</span>
+        <input type="number" id="inp-block-size" value="16" style="width:70px">
+      </div>
     </div>
 
+    <div class="ctrl-row" style="margin-top:14px">
+      <div class="field">
+        <span class="lbl">Segment Name</span>
+        <input type="text" id="inp-seg-name" placeholder="e.g. code" style="width:120px">
+      </div>
+      <div class="field">
+        <span class="lbl">Size (Bytes)</span>
+        <input type="number" id="inp-seg-size" placeholder="200" style="width:100px">
+      </div>
+      <div class="field">
+        <span class="lbl">Actions</span>
+        <div class="btn-row">
+          <button class="bp" onclick="allocSegment()">+ Allocate</button>
+          <select id="sel-free-name" style="width:90px"></select>
+          <button class="bs" onclick="freeSegment()">Free</button>
+          <button class="bs" onclick="compactMemory()">&#8635; Compact</button>
+          <button class="bd" onclick="resetAll()">&#10227; Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Presets -->
+  <div class="pnl">
+    <div class="sec">Preset Scenarios</div>
+    <div class="preset-row">
+      <button class="bs" onclick="loadPreset('frag')">Fragmentation Demo</button>
+      <button class="bs" onclick="loadPreset('compact')">Compaction Demo</button>
+      <button class="bs" onclick="loadPreset('full')">Memory Full</button>
+      <button class="bs" onclick="loadPreset('bestworst')">Best vs Worst</button>
+    </div>
+  </div>
+
+  <!-- Memory Map -->
+  <div class="pnl">
+    <div class="sec">Memory Map</div>
+    <div class="memory-map" id="memory-map"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="pnl">
+    <div class="sec">Fragmentation Statistics</div>
+    <div class="stats-row" id="stats-grid">
+      <div class="sc"><div class="sc-lbl">Used</div><div class="sc-val" id="st-used">&mdash;</div></div>
+      <div class="sc"><div class="sc-lbl">Free</div><div class="sc-val" id="st-free">&mdash;</div></div>
+      <div class="sc"><div class="sc-lbl">Internal Frag</div><div class="sc-val" id="st-int">&mdash;</div></div>
+      <div class="sc"><div class="sc-lbl">External Frag</div><div class="sc-val" id="st-ext">&mdash;</div></div>
+      <div class="sc"><div class="sc-lbl">Utilization</div><div class="sc-val" id="st-util">&mdash;</div></div>
+    </div>
+  </div>
+
+  <!-- Tables -->
+  <div class="tbl-row">
+    <div class="pnl">
+      <div class="sec">Segment Table</div>
+      <div id="seg-table-empty" class="empty">No segments allocated</div>
+      <table id="segment-table" style="display:none">
+        <thead>
+          <tr><th>Name</th><th class="num">Base</th><th class="num">Limit</th><th class="num">Allocated</th><th class="num">Int.Frag</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="pnl">
+      <div class="sec">Free Holes</div>
+      <div id="holes-table-empty" class="empty">No simulation data</div>
+      <table id="holes-table" style="display:none">
+        <thead>
+          <tr><th class="num">Base</th><th class="num">Size</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="pnl">
+    <div class="sec">Operation History</div>
+    <div class="hist-scroll" id="history-log">
+      <div class="empty" id="hist-empty">Run operations to see history</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var currentState = {
+  strategy: 'first_fit',
+  totalMem: 4096,
+  blockSize: 16,
+  operations: [],
+  snapshots: []
+};
+
+var PRESETS = {
+  'frag': {
+    name: 'Fragmentation Demo', totalMem: 1024, blockSize: 16,
+    operations: [
+      { action: 'alloc', name: 'A', size: 200 },
+      { action: 'alloc', name: 'B', size: 300 },
+      { action: 'alloc', name: 'C', size: 400 },
+      { action: 'free', name: 'B' },
+      { action: 'alloc', name: 'D', size: 100 }
+    ]
+  },
+  'compact': {
+    name: 'Compaction Demo', totalMem: 2000, blockSize: 16,
+    operations: [
+      { action: 'alloc', name: 'A', size: 500 },
+      { action: 'alloc', name: 'B', size: 500 },
+      { action: 'alloc', name: 'C', size: 500 },
+      { action: 'free', name: 'A' },
+      { action: 'free', name: 'C' },
+      { action: 'compact' }
+    ]
+  },
+  'full': {
+    name: 'Memory Full', totalMem: 4096, blockSize: 16,
+    operations: [
+      { action: 'alloc', name: 'A', size: 1000 },
+      { action: 'alloc', name: 'B', size: 1000 },
+      { action: 'alloc', name: 'C', size: 1000 },
+      { action: 'alloc', name: 'D', size: 1000 },
+      { action: 'alloc', name: 'E', size: 500 }
+    ]
+  },
+  'bestworst': {
+    name: 'Best vs Worst', totalMem: 2000, blockSize: 16,
+    operations: [
+      { action: 'alloc', name: 'A', size: 200 },
+      { action: 'alloc', name: 'B', size: 800 },
+      { action: 'alloc', name: 'C', size: 500 },
+      { action: 'free', name: 'A' },
+      { action: 'free', name: 'B' },
+      { action: 'alloc', name: 'D', size: 150 }
+    ]
+  }
+};
+
+function getColorForSegment(index) {
+  return 'hsl(' + (index * 47) + ', 55%, 35%)';
+}
+
+function setStrategy(strat) {
+  currentState.strategy = strat;
+  var tabs = document.querySelectorAll('.atab');
+  for (var i = 0; i < tabs.length; i++) {
+    if (tabs[i].getAttribute('data-strategy') === strat) {
+      tabs[i].classList.add('on');
+    } else {
+      tabs[i].classList.remove('on');
+    }
+  }
+}
+
+function fetchSegmentation() {
+  var isLocked = currentState.operations.length > 0;
+  document.getElementById('inp-total-mem').disabled = isLocked;
+  document.getElementById('inp-block-size').disabled = isLocked;
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/segmentation', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        var snapshots = JSON.parse(xhr.responseText);
+        currentState.snapshots = snapshots;
+        renderAll();
+      } else {
+        try {
+          var errData = JSON.parse(xhr.responseText);
+          alert('API Error: ' + (errData.error || 'Server error'));
+        } catch(e) {
+          alert('API Error: ' + xhr.status);
+        }
+      }
+    }
+  };
+  xhr.send(JSON.stringify({
+    operations: currentState.operations,
+    strategy: currentState.strategy,
+    total_memory: currentState.totalMem,
+    block_size: currentState.blockSize
+  }));
+}
+
+function renderAll() {
+  var snap = currentState.snapshots.length > 0
+    ? currentState.snapshots[currentState.snapshots.length - 1]
+    : null;
+  renderMemoryMap(snap);
+  renderSegmentTable(snap);
+  renderHolesTable(snap);
+  renderFragStats(snap);
+  renderHistory();
+  updateFreeDropdown(snap);
+}
+
+function renderMemoryMap(snapshot) {
+  var container = document.getElementById('memory-map');
+  container.innerHTML = '';
+  if (!snapshot || !snapshot.memory_map) return;
+
+  var colorIndexes = {};
+  var cIdx = 0;
+  var segKeys = Object.keys(snapshot.segments || {});
+  for (var i = 0; i < segKeys.length; i++) {
+    colorIndexes[segKeys[i]] = ++cIdx;
+  }
+
+  for (var j = 0; j < snapshot.memory_map.length; j++) {
+    var block = snapshot.memory_map[j];
+    var pct = (block.size / currentState.totalMem) * 100;
+    var div = document.createElement('div');
+    div.style.width = pct + '%';
+
+    if (block.type === 'segment') {
+      div.className = 'mem-seg';
+      div.style.background = getColorForSegment(colorIndexes[block.name] || 0);
+      div.title = 'Segment: ' + block.name + '\nBase: ' + block.base + '\nLimit: ' + block.requested + '\nAllocated: ' + block.size;
+      div.innerText = block.name + ' (' + block.size + 'B)';
+    } else if (block.type === 'hole') {
+      div.className = 'mem-seg mem-hole';
+      div.title = 'Hole Base: ' + block.base + '\nSize: ' + block.size;
+      div.innerText = block.size + 'B';
+    }
+    container.appendChild(div);
+  }
+}
+
+function renderSegmentTable(snapshot) {
+  var table = document.getElementById('segment-table');
+  var empty = document.getElementById('seg-table-empty');
+  var tbody = table.querySelector('tbody');
+  tbody.innerHTML = '';
+
+  if (!snapshot || !snapshot.segments || Object.keys(snapshot.segments).length === 0) {
+    table.style.display = 'none';
+    empty.style.display = '';
+    return;
+  }
+  table.style.display = '';
+  empty.style.display = 'none';
+
+  var segVals = Object.values(snapshot.segments);
+  for (var i = 0; i < segVals.length; i++) {
+    var seg = segVals[i];
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + seg.name + '</td>' +
+      '<td class="num">' + seg.base + '</td>' +
+      '<td class="num">' + seg.limit + '</td>' +
+      '<td class="num">' + seg.allocated_size + '</td>' +
+      '<td class="num">' + seg.internal_frag + '</td>';
+    tbody.appendChild(tr);
+  }
+}
+
+function renderHolesTable(snapshot) {
+  var table = document.getElementById('holes-table');
+  var empty = document.getElementById('holes-table-empty');
+  var tbody = table.querySelector('tbody');
+  tbody.innerHTML = '';
+
+  if (!snapshot || !snapshot.free_holes || snapshot.free_holes.length === 0) {
+    table.style.display = 'none';
+    empty.style.display = '';
+    return;
+  }
+  table.style.display = '';
+  empty.style.display = 'none';
+
+  for (var i = 0; i < snapshot.free_holes.length; i++) {
+    var hole = snapshot.free_holes[i];
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="num">' + hole.base + '</td>' +
+      '<td class="num">' + hole.size + '</td>';
+    tbody.appendChild(tr);
+  }
+}
+
+function renderFragStats(snapshot) {
+  if (!snapshot || !snapshot.fragmentation) {
+    document.getElementById('st-used').textContent = '\u2014';
+    document.getElementById('st-free').textContent = '\u2014';
+    document.getElementById('st-int').textContent = '\u2014';
+    document.getElementById('st-ext').textContent = '\u2014';
+    document.getElementById('st-util').textContent = '\u2014';
+    return;
+  }
+
+  var f = snapshot.fragmentation;
+  document.getElementById('st-used').textContent = f.used + 'B';
+  document.getElementById('st-free').textContent = (f.total - f.used) + 'B';
+
+  var intEl = document.getElementById('st-int');
+  intEl.textContent = f.internal_frag + 'B';
+  intEl.className = 'sc-val' + (f.internal_frag > 0 ? ' sv-warn' : '');
+
+  var extEl = document.getElementById('st-ext');
+  extEl.textContent = f.external_frag + 'B';
+  extEl.className = 'sc-val' + (f.external_frag > 0 ? ' sv-err' : '');
+
+  document.getElementById('st-util').textContent = f.utilization + '%';
+}
+
+function renderHistory() {
+  var container = document.getElementById('history-log');
+  var histEmpty = document.getElementById('hist-empty');
+  container.innerHTML = '';
+
+  if (currentState.snapshots.length === 0) {
+    container.appendChild(histEmpty);
+    return;
+  }
+
+  for (var i = 0; i < currentState.snapshots.length; i++) {
+    var snap = currentState.snapshots[i];
+    var op = snap.operation;
+    var desc = '';
+    if (op.action === 'alloc') desc = 'alloc ' + op.name + '(' + op.size + 'B)';
+    else if (op.action === 'free') desc = 'free ' + op.name;
+    else if (op.action === 'compact') desc = 'compact';
+
+    var isErr = !!snap.error;
+    var entry = document.createElement('div');
+    entry.className = 'hist-entry' + (isErr ? ' is-err' : '');
+    entry.innerHTML = '<div class="step-num">#' + (i + 1) + '</div>' +
+      '<div class="step-op">' + desc + '</div>' +
+      '<div class="step-res">' + (isErr ? snap.error : 'OK') + '</div>';
+    container.appendChild(entry);
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function updateFreeDropdown(snapshot) {
+  var sel = document.getElementById('sel-free-name');
+  sel.innerHTML = '';
+  if (!snapshot || !snapshot.segments) return;
+
+  var keys = Object.keys(snapshot.segments);
+  for (var i = 0; i < keys.length; i++) {
+    var opt = document.createElement('option');
+    opt.value = keys[i];
+    opt.innerText = keys[i];
+    sel.appendChild(opt);
+  }
+}
+
+function updateConfigFromInputs() {
+  if (currentState.operations.length === 0) {
+    var mem = parseInt(document.getElementById('inp-total-mem').value);
+    var bs = parseInt(document.getElementById('inp-block-size').value);
+    if (mem > 0) currentState.totalMem = mem;
+    if (bs > 0) currentState.blockSize = bs;
+  }
+}
+
+function allocSegment() {
+  updateConfigFromInputs();
+  var name = document.getElementById('inp-seg-name').value.trim();
+  var size = parseInt(document.getElementById('inp-seg-size').value);
+
+  if (!name || isNaN(size) || size <= 0) {
+    alert('Please provide valid name and size.');
+    return;
+  }
+
+  var snap = currentState.snapshots.length ? currentState.snapshots[currentState.snapshots.length - 1] : null;
+  if (snap && snap.segments && snap.segments[name]) {
+    alert('Segment "' + name + '" already exists.');
+    return;
+  }
+
+  currentState.operations.push({ action: 'alloc', name: name, size: size });
+  document.getElementById('inp-seg-name').value = '';
+  fetchSegmentation();
+}
+
+function freeSegment() {
+  var name = document.getElementById('sel-free-name').value;
+  if (!name) return;
+  currentState.operations.push({ action: 'free', name: name });
+  fetchSegmentation();
+}
+
+function compactMemory() {
+  currentState.operations.push({ action: 'compact' });
+  fetchSegmentation();
+}
+
+function loadPreset(presetKey) {
+  var p = PRESETS[presetKey];
+  if (!p) return;
+  resetAll(false);
+  currentState.totalMem = p.totalMem;
+  currentState.blockSize = p.blockSize;
+  document.getElementById('inp-total-mem').value = p.totalMem;
+  document.getElementById('inp-block-size').value = p.blockSize;
+  currentState.operations = p.operations.slice();
+  fetchSegmentation();
+}
+
+function resetAll(render) {
+  if (render === undefined) render = true;
+  currentState.operations = [];
+  currentState.snapshots = [];
+  document.getElementById('inp-total-mem').disabled = false;
+  document.getElementById('inp-block-size').disabled = false;
+  if (render) {
+    renderAll();
+  }
+}
+</script>
 </body>
 </html>
