@@ -1,6 +1,6 @@
 import os
+from core.segmentation import simulate_fragmentation
 from flask import Flask, request, jsonify, render_template
-
 from core.fifo import run_fifo, detect_beladys_anomaly
 from core.lru import run_lru
 from core.optimal import run_optimal
@@ -49,11 +49,55 @@ def simulate():
             'optimal': optimal_res,
             'belady': belady_res
         })
+    
         
     except ValueError as e:
         return jsonify({'error': f'Invalid input format: {str(e)}'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    # =========================
+# T18: SEGMENTATION ROUTES
+# =========================
+
+@flask_app.route('/segmentation')
+def segmentation_page():
+    return render_template('segmentation.html')
+
+
+@flask_app.route('/api/segmentation', methods=['POST'])
+def segmentation_api():
+    try:
+        data = request.json
+
+        if not data:
+            return jsonify({'error': 'Missing request body'}), 400
+
+        operations = data.get('operations')
+        strategy = data.get('strategy')
+        total_memory = data.get('total_memory', 4096)
+        block_size = data.get('block_size', 16)
+
+        # Validate strategy
+        valid_strategies = ['first_fit', 'best_fit', 'worst_fit', 'next_fit']
+        if strategy not in valid_strategies:
+            return jsonify({'error': 'Invalid strategy'}), 400
+
+        # Validate operations
+        if not isinstance(operations, list):
+            return jsonify({'error': 'Operations must be a list'}), 400
+
+        # Call core segmentation logic
+        result = simulate_fragmentation(
+            operations=operations,
+            strategy=strategy,
+            total_memory=total_memory,
+            block_size=block_size
+        )
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     flask_app.run(host='0.0.0.0', port=5000, debug=True)
