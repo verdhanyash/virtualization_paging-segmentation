@@ -111,5 +111,8 @@ def segmentation_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+# Expose 'app' for Vercel serverless deployment
+app = flask_app
+
 if __name__ == '__main__':
     flask_app.run(host='0.0.0.0', port=5000, debug=True)
