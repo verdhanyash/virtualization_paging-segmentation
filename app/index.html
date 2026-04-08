@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Virtual Memory Optimizer</title>
+<title>Virtual Memory Simulator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -15,120 +15,70 @@
   --t:#f0f0f0;--t2:#777;--t3:#444;--t4:#2a2a2a;
   --white:#f0f0f0;
 }
-body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh;padding:24px}
-.app{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh}
 
-/* Header */
-.hdr{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--b)}
-.hdr h1{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
-.hdr-sub{font-size:10px;color:var(--t3);letter-spacing:.06em}
+/* Nav - IDENTICAL to algo pages */
+nav{padding:16px 40px;border-bottom:1px solid var(--b);display:flex;gap:6px;align-items:center}
+nav a{color:var(--t2);text-decoration:none;font-size:11px;padding:6px 14px;border-radius:3px;letter-spacing:.05em;text-transform:uppercase;transition:all .15s}
+nav a:hover{color:var(--t)}
+nav a.active{color:var(--t);background:var(--bg3);border:1px solid var(--b)}
+nav .sep{color:var(--t4);margin:0 2px}
+
+.app{max-width:1120px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:14px}
+
+/* Hero */
+.hero{text-align:center;padding:48px 0 36px;position:relative}
+.hero-title{font-size:22px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px}
+.hero-sub{font-size:12px;color:var(--t2);letter-spacing:.06em;max-width:560px;margin:0 auto;line-height:1.8}
+.hero-line{width:48px;height:2px;background:var(--white);margin:20px auto 0;border-radius:1px}
 
 /* Panel */
 .pnl{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:16px}
+.sec{font-size:9px;color:var(--t2);letter-spacing:.12em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--b);margin-bottom:14px}
 
-/* Controls */
-.ctrl-layout{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end}
-.ctrl-left{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
-.ctrl-right{display:flex;flex-direction:column;gap:12px;align-items:flex-end}
+/* Algorithm Cards */
+.algo-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.algo-card{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:20px;cursor:pointer;transition:all .2s;text-decoration:none;color:var(--t);display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
+.algo-card:hover{border-color:var(--b3);transform:translateY(-2px);box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.algo-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--white);opacity:0;transition:opacity .2s}
+.algo-card:hover::before{opacity:1}
+.ac-icon{font-size:24px;opacity:.6}
+.ac-name{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.ac-desc{font-size:11px;color:var(--t2);line-height:1.6}
+.ac-tag{display:inline-flex;align-items:center;padding:3px 8px;background:rgba(255,255,255,.05);border:1px solid var(--b);border-radius:2px;font-size:9px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;width:fit-content}
+.ac-arrow{font-size:10px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-top:auto;padding-top:8px;transition:color .2s}
+.algo-card:hover .ac-arrow{color:var(--white)}
+
+/* Quick Compare */
+.qc-layout{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end}
+.qc-left{display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:end}
 .field{display:flex;flex-direction:column;gap:5px}
 .lbl{font-size:9px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase}
 input[type=text]{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:8px 10px;font-family:inherit;font-size:13px;border-radius:2px;outline:none;width:100%}
 input[type=text]:focus{border-color:var(--b3)}
 .frame-row{display:flex;gap:8px;align-items:center}
-.frame-row input[type=range]{flex:1;accent-color:var(--white)}
-.frame-num{font-size:18px;font-weight:600;min-width:20px;text-align:right}
-.algo-tabs{display:flex}
-.atab{padding:7px 16px;background:transparent;border:1px solid var(--b2);color:var(--t2);font-family:inherit;font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .15s}
-.atab:not(:first-child){border-left:none}
-.atab:first-child{border-radius:2px 0 0 2px}
-.atab:last-child{border-radius:0 2px 2px 0}
-.atab.on{background:var(--white);color:#0a0a0a;border-color:var(--white)}
-.atab:hover:not(.on){border-color:var(--b3);color:var(--t)}
-.btn-row{display:flex;gap:6px;flex-wrap:wrap}
-button{padding:7px 13px;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;border:none}
+.frame-row input[type=range]{flex:1;accent-color:var(--white);width:100%}
+button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;border:none}
 .bp{background:var(--white);color:#0a0a0a}
 .bp:hover{opacity:.85}
-.bs{background:transparent;color:var(--t);border:1px solid var(--b2)}
-.bs:hover:not(:disabled){border-color:var(--b3)}
 .bd{background:transparent;color:var(--t2);border:1px solid var(--b)}
-.bd:hover:not(:disabled){border-color:var(--b3);color:var(--t)}
-button:disabled{opacity:.28;cursor:not-allowed}
-.spd-row{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--t2)}
-.spd-row input{accent-color:var(--white);width:90px}
+.bd:hover{border-color:var(--b3);color:var(--t)}
 
-/* Step section heading */
-.sec{font-size:9px;color:var(--t2);letter-spacing:.12em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--b);margin-bottom:14px}
-
-/* Placeholder */
-.empty{text-align:center;padding:28px 0;color:var(--t3);font-size:11px}
-
-/* Step info row */
-.step-info{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
-.sstat{display:flex;flex-direction:column;gap:1px}
-.sstat-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em}
-.sstat-val{font-size:20px;font-weight:600}
-.fpill{display:inline-flex;align-items:center;padding:4px 11px;border-radius:2px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border:1px solid}
-.fpill.is-fault{border-color:var(--white);color:var(--white);background:rgba(255,255,255,.05)}
-.fpill.is-hit{border-color:var(--t4);color:var(--t2)}
-
-/* Frame boxes */
-.frames-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-.fbox{width:58px;height:58px;border:1px solid var(--b2);border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;background:var(--bg);transition:background .25s,border-color .25s}
-.fbox.loaded{background:var(--white);color:#0a0a0a;border-color:var(--white)}
-.fbox.empty{background:var(--bg);border-color:var(--b)}
-.fbox.newly{animation:fload .45s ease-out}
-@keyframes fload{0%{box-shadow:0 0 0 0 rgba(255,255,255,.65);transform:scale(1.06)}100%{box-shadow:0 0 0 8px rgba(255,255,255,0);transform:scale(1)}}
-.fidx{position:absolute;top:4px;left:5px;font-size:9px;color:var(--t3);letter-spacing:.04em}
-.fbox.loaded .fidx{color:#888}
-.fpage{font-size:21px;font-weight:600}
-.fbox.empty .fpage{color:var(--t4)}
-
-/* Progress bar */
-.prog{height:2px;background:var(--b);margin:10px 0 14px;border-radius:1px;overflow:hidden}
-.prog-fill{height:100%;background:var(--white);border-radius:1px;transition:width .3s ease}
-
-/* Ref string pills */
-.ref-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
-.ref-pills{display:flex;gap:3px;flex-wrap:wrap}
-.rpill{width:25px;height:25px;display:flex;align-items:center;justify-content:center;font-size:10px;border:1px solid transparent;border-radius:2px;cursor:pointer;transition:all .12s;color:var(--t3);background:var(--bg3);user-select:none}
-.rpill:hover{border-color:var(--b2);color:var(--t2)}
-.rpill.cur{border-color:var(--white);color:var(--white);background:rgba(255,255,255,.07)}
-.rpill.fpast{color:#aaa;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.15)}
-.rpill.hpast{color:var(--t3)}
-.rpill.fut{opacity:.3}
-
-/* History table */
-.hist-wrap{overflow-x:auto}
-.hist-wrap table{border-collapse:separate;border-spacing:2px;white-space:nowrap}
-.hist-wrap th{width:26px;height:20px;font-size:9px;font-weight:400;color:var(--t3);text-align:center;padding:0}
-.hist-wrap td{width:26px;height:23px;font-size:10px;text-align:center;border-radius:2px;padding:0;transition:background .2s}
-.rl{font-size:9px!important;color:var(--t2)!important;text-align:left!important;padding:0 8px 0 0!important;width:auto!important;white-space:nowrap;background:transparent!important;min-width:58px}
-.cf{background:var(--white);color:#0a0a0a;font-weight:600}
-.ch{background:var(--bg3);color:#555}
-.cn{background:var(--white);color:#0a0a0a;font-weight:600}
-.ck{background:var(--bg3);color:#444}
-.ce{background:var(--bg);color:var(--t4)}
-.cv{background:var(--bg3);color:var(--t3);text-decoration:line-through}
-.cnd{background:transparent;color:var(--t3)}
-.cfy{background:transparent;color:var(--white);font-weight:600}
-.cfn{background:transparent;color:var(--t3)}
-.ccol{outline:1px solid rgba(255,255,255,.28);outline-offset:-1px}
-
-/* Stats */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.sc{background:var(--bg3);border-radius:3px;padding:12px 14px;text-align:center}
-.sc-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
-.sc-val{font-size:26px;font-weight:600}
-.sv-algo{color:#aaa;font-size:13px!important;letter-spacing:.05em}
-.sv-f{color:var(--white)}
-.sv-h{color:#555}
-.sv-r{color:#888}
+/* Comparison Results */
+.cmp-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+.cmp-card{background:var(--bg3);border-radius:3px;padding:16px;text-align:center}
+.cc-name{font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.cc-faults{font-size:32px;font-weight:600;margin-bottom:2px}
+.cc-sub{font-size:10px;color:var(--t3)}
+.cc-best{border:1px solid rgba(255,255,255,.15)}
+.cc-best .cc-faults{color:var(--white)}
+.cc-best .cc-sub{color:var(--t2)}
 
 /* Charts */
 .charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .chart-title{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em}
-.chart-wrap{position:relative;height:180px}
+.chart-wrap{position:relative;height:200px}
 .legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
 .leg-item{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t2)}
 .leg-dot{width:8px;height:8px;border-radius:1px}
@@ -136,417 +86,328 @@ button:disabled{opacity:.28;cursor:not-allowed}
 .anim-dot{width:5px;height:5px;background:var(--white);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
+.empty{text-align:center;padding:28px 0;color:var(--t3);font-size:11px}
+
+/* Seg Compare */
+.seg-preset-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.seg-cmp-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.seg-card{background:var(--bg3);border-radius:3px;padding:14px;text-align:center;transition:border-color .2s}
+.seg-card-name{font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.seg-card-val{font-size:24px;font-weight:600;margin-bottom:2px}
+.seg-card-sub{font-size:10px;color:var(--t3)}
+.seg-card.best-card{border:1px solid rgba(255,255,255,.15)}
+.seg-card.best-card .seg-card-val{color:var(--white)}
+.seg-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.seg-detail{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em}
+.seg-detail span{color:var(--t2);font-size:11px;font-weight:500}
+.seg-detail.warn span{color:#ff9800}
+.seg-detail.err span{color:#f44336}
+
+/* Concepts */
+.concepts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.concept{background:var(--bg3);border-radius:3px;padding:16px 20px;border-left:3px solid var(--b2)}
+.concept-title{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.concept-text{font-size:11px;color:var(--t2);line-height:1.6}
+
 @media(max-width:720px){
-  .ctrl-layout{grid-template-columns:1fr}
-  .ctrl-left{grid-template-columns:1fr}
+  .algo-cards{grid-template-columns:repeat(2,1fr)}
   .charts-2col{grid-template-columns:1fr}
-  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .seg-cmp-row{grid-template-columns:repeat(2,1fr)}
+  .concepts{grid-template-columns:1fr}
+  .cmp-row{grid-template-columns:1fr}
+  .seg-cmp-row{grid-template-columns:1fr}
+  .qc-layout{grid-template-columns:1fr}
+  .qc-left{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
+
+<nav>
+  <a href="/" class="active">Overview</a>
+  <span class="sep">|</span>
+  <a href="/fifo">FIFO</a>
+  <a href="/lru">LRU</a>
+  <a href="/optimal">Optimal</a>
+  <span class="sep">|</span>
+  <a href="/segmentation">Segmentation</a>
+</nav>
+
 <div class="app">
 
-  <!-- Header -->
-  <div class="hdr">
-    <h1>Virtual Memory Optimizer</h1>
-    <span class="hdr-sub">FIFO &middot; LRU &middot; Optimal &middot; Belady&#39;s Anomaly</span>
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-title">Virtual Memory Simulator</div>
+    <div class="hero-sub">
+      Explore page replacement algorithms and memory segmentation through interactive step-by-step visualization, real-time statistics, and side-by-side comparisons.
+    </div>
+    <div class="hero-line"></div>
   </div>
 
-  <!-- Controls -->
+  <!-- Algorithm Cards -->
+  <div class="algo-cards">
+    <a class="algo-card" href="/fifo">
+      <div class="ac-icon">&#9638;</div>
+      <div class="ac-name">FIFO</div>
+      <div class="ac-desc">First In, First Out. Evicts the oldest page in memory. Simple queue-based approach.</div>
+      <div class="ac-tag">Queue-based</div>
+      <div class="ac-arrow">Explore &#8594;</div>
+    </a>
+    <a class="algo-card" href="/lru">
+      <div class="ac-icon">&#9684;</div>
+      <div class="ac-name">LRU</div>
+      <div class="ac-desc">Least Recently Used. Evicts the page unused for the longest time. Tracks recency.</div>
+      <div class="ac-tag">Recency-based</div>
+      <div class="ac-arrow">Explore &#8594;</div>
+    </a>
+    <a class="algo-card" href="/optimal">
+      <div class="ac-icon">&#9733;</div>
+      <div class="ac-name">Optimal</div>
+      <div class="ac-desc">Evicts the page used farthest in the future. Theoretical minimum faults.</div>
+      <div class="ac-tag">Clairvoyant</div>
+      <div class="ac-arrow">Explore &#8594;</div>
+    </a>
+    <a class="algo-card" href="/segmentation">
+      <div class="ac-icon">&#9635;</div>
+      <div class="ac-name">Segmentation</div>
+      <div class="ac-desc">Variable-size memory blocks with allocation strategies and fragmentation analysis.</div>
+      <div class="ac-tag">Memory Alloc</div>
+      <div class="ac-arrow">Explore &#8594;</div>
+    </a>
+  </div>
+
+  <!-- Quick Compare -->
   <div class="pnl">
-    <div class="ctrl-layout">
-      <div class="ctrl-left">
-        <div class="field" style="grid-column:1/-1">
-          <span class="lbl">Reference String &mdash; comma or space separated</span>
-          <input type="text" id="refIn" value="1,2,3,4,1,2,5,1,2,3,4,5" placeholder="e.g. 1,2,3,4,1,2,5,1,2,3,4,5">
+    <div class="sec">Quick Compare &mdash; All Algorithms</div>
+    <div class="qc-layout">
+      <div class="qc-left">
+        <div class="field">
+          <span class="lbl">Reference String</span>
+          <input type="text" id="refIn" value="1,2,3,4,1,2,5,1,2,3,4,5" placeholder="e.g. 1,2,3,4,1,2,5">
         </div>
         <div class="field">
-          <span class="lbl">Frame Count &mdash; <span id="fcDisp">3</span></span>
+          <span class="lbl">Frames &mdash; <span id="fcDisp">3</span></span>
           <div class="frame-row">
             <input type="range" id="fcSlider" min="1" max="10" value="3">
           </div>
         </div>
-        <div class="field">
-          <span class="lbl">Algorithm</span>
-          <div class="algo-tabs">
-            <button class="atab on" data-a="FIFO" onclick="selAlgo('FIFO')">FIFO</button>
-            <button class="atab" data-a="LRU" onclick="selAlgo('LRU')">LRU</button>
-            <button class="atab" data-a="Optimal" onclick="selAlgo('Optimal')">Optimal</button>
-          </div>
-        </div>
       </div>
-      <div class="ctrl-right">
-        <div class="field" style="align-items:flex-end">
-          <span class="lbl">Playback</span>
-          <div class="btn-row">
-            <button class="bp" onclick="runSim()">&#9654; Run</button>
-            <button class="bs" id="stepBtn" onclick="stepFwd()" disabled>&#8594; Step</button>
-            <button class="bs" id="autoBtn" onclick="toggleAuto()" disabled>&#9646;&#9646; Auto</button>
-            <button class="bd" onclick="resetSim()">&#10227; Reset</button>
-          </div>
-        </div>
-        <div class="field" style="align-items:flex-end">
-          <span class="lbl">Speed</span>
-          <div class="spd-row">
-            <span>slow</span>
-            <input type="range" id="spdSlider" min="1" max="10" value="5">
-            <span>fast</span>
-          </div>
-        </div>
-        <div class="field" style="align-items:flex-end">
-          <span class="lbl">Navigate</span>
-          <div class="btn-row">
-            <button class="bs" id="fbtn" onclick="nav('first')" disabled>|&#8592;</button>
-            <button class="bs" id="pbtn" onclick="nav('prev')" disabled>&#8592;</button>
-            <button class="bs" id="nbtn" onclick="nav('next')" disabled>&#8594;</button>
-            <button class="bs" id="lbtn" onclick="nav('last')" disabled>&#8594;|</button>
-          </div>
-        </div>
+      <div style="display:flex;gap:6px;align-items:end">
+        <button class="bp" onclick="runCompare()">&#9654; Compare All</button>
+        <button class="bd" onclick="resetCompare()">&#10227; Reset</button>
       </div>
     </div>
   </div>
 
-  <!-- Step Visualization -->
-  <div class="pnl">
-    <div class="sec">Step-by-step Visualization</div>
-    <div id="stepEmpty" class="empty">Run a simulation to begin step-by-step playback</div>
-    <div id="stepContent" style="display:none">
-      <div class="step-info" id="stepInfoRow">
-        <div class="sstat">
-          <span class="sstat-lbl">Step</span>
-          <span class="sstat-val" id="sNum">&mdash;</span>
-        </div>
-        <div class="sstat">
-          <span class="sstat-lbl">Page</span>
-          <span class="sstat-val" id="sPage">&mdash;</span>
-        </div>
-        <span class="fpill" id="fPill">&mdash;</span>
-        <div class="sstat" id="evStat" style="display:none">
-          <span class="sstat-lbl">Evicted</span>
-          <span class="sstat-val" id="sEvict" style="color:var(--t2)">&mdash;</span>
-        </div>
-        <div style="flex:1"></div>
-        <div class="sstat" style="text-align:right">
-          <span class="sstat-lbl">Faults so far</span>
-          <span class="sstat-val" id="sFaultsSoFar" style="color:var(--white)">&mdash;</span>
-        </div>
+  <!-- Comparison Results -->
+  <div id="cmpEmpty" class="pnl">
+    <div class="empty">Click &ldquo;Compare All&rdquo; to run FIFO, LRU, and Optimal side-by-side</div>
+  </div>
+
+  <div id="cmpResults" style="display:none">
+    <div class="cmp-row">
+      <div class="cmp-card" id="cc-fifo">
+        <div class="cc-name">FIFO</div>
+        <div class="cc-faults" id="cf-fifo">&mdash;</div>
+        <div class="cc-sub" id="cs-fifo">faults</div>
       </div>
-      <div class="frames-row" id="framesRow"></div>
-      <div class="prog"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
-      <div class="ref-lbl">Reference String &mdash; click any step to jump</div>
-      <div class="ref-pills" id="refPills"></div>
+      <div class="cmp-card" id="cc-lru">
+        <div class="cc-name">LRU</div>
+        <div class="cc-faults" id="cf-lru">&mdash;</div>
+        <div class="cc-sub" id="cs-lru">faults</div>
+      </div>
+      <div class="cmp-card" id="cc-opt">
+        <div class="cc-name">Optimal</div>
+        <div class="cc-faults" id="cf-opt">&mdash;</div>
+        <div class="cc-sub" id="cs-opt">faults</div>
+      </div>
     </div>
-  </div>
 
-  <!-- History Table -->
-  <div class="pnl">
-    <div class="sec">Frame State History</div>
-    <div id="histEmpty" class="empty" style="padding:14px 0">Run simulation to see full step history</div>
-    <div id="histContent" style="display:none">
-      <div class="hist-wrap" id="histTable"></div>
+    <!-- Charts -->
+    <div class="charts-2col">
+      <div class="pnl">
+        <div class="chart-hdr">
+          <span class="chart-title">Faults vs Hits &mdash; All Algorithms</span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#f0f0f0"></div>FIFO</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#888"></div>LRU</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#444"></div>Optimal</div>
+        </div>
+        <div class="chart-wrap"><canvas id="compChart"></canvas></div>
+      </div>
+      <div class="pnl">
+        <div class="chart-hdr">
+          <span class="chart-title">B&eacute;lady's Anomaly (FIFO, frames 1&ndash;10)</span>
+          <span id="anomalyBadge" style="display:none" class="anomaly-badge"><span class="anim-dot"></span>Anomaly Detected</span>
+        </div>
+        <div class="chart-wrap"><canvas id="beladyChart"></canvas></div>
+      </div>
     </div>
-  </div>
 
-  <!-- Stats -->
-  <div class="pnl">
-    <div class="sec">Statistics</div>
-    <div class="stats-row">
-      <div class="sc"><div class="sc-lbl">Algorithm</div><div class="sc-val sv-algo" id="stAlgo">&mdash;</div></div>
-      <div class="sc"><div class="sc-lbl">Page Faults</div><div class="sc-val sv-f" id="stF">&mdash;</div></div>
-      <div class="sc"><div class="sc-lbl">Page Hits</div><div class="sc-val sv-h" id="stH">&mdash;</div></div>
-      <div class="sc"><div class="sc-lbl">Fault Rate</div><div class="sc-val sv-r" id="stR">&mdash;</div></div>
-    </div>
-  </div>
-
-  <!-- Charts Row 1: Comparison + Belady's -->
-  <div class="charts-2col">
+    <!-- Fault Race -->
     <div class="pnl">
       <div class="chart-hdr">
-        <span class="chart-title">Algorithm Comparison &mdash; Faults vs Hits</span>
+        <span class="chart-title">Cumulative Fault Race &mdash; Step by Step</span>
       </div>
       <div class="legend">
         <div class="leg-item"><div class="leg-dot" style="background:#f0f0f0"></div>FIFO</div>
         <div class="leg-item"><div class="leg-dot" style="background:#888"></div>LRU</div>
-        <div class="leg-item"><div class="leg-dot" style="background:#444"></div>Optimal</div>
-        <div class="leg-item"><div class="leg-dot" style="background:rgba(240,240,240,.18)"></div>Hits (outline)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#555"></div>Optimal</div>
       </div>
-      <div id="compEmpty" class="empty" style="padding:16px 0;font-size:11px">Run simulation to compare algorithms</div>
-      <div class="chart-wrap" id="compWrap" style="display:none"><canvas id="compChart"></canvas></div>
-    </div>
-    <div class="pnl">
-      <div class="chart-hdr">
-        <span class="chart-title">Belady&#39;s Anomaly (FIFO, frames 1&ndash;10)</span>
-        <span id="anomalyBadge" style="display:none" class="anomaly-badge"><span class="anim-dot"></span>Anomaly Detected</span>
-      </div>
-      <div id="beladyEmpty" class="empty" style="padding:16px 0;font-size:11px">Run simulation to analyze Belady&#39;s anomaly</div>
-      <div class="chart-wrap" id="beladyWrap" style="display:none"><canvas id="beladyChart"></canvas></div>
+      <div style="position:relative;height:200px"><canvas id="raceChart"></canvas></div>
     </div>
   </div>
 
-  <!-- Fault Race Chart -->
+  <!-- Segmentation Strategy Comparison -->
   <div class="pnl">
-    <div class="chart-hdr">
-      <span class="chart-title">Cumulative Fault Race &mdash; All Algorithms</span>
+    <div class="sec">Segmentation Strategy Comparison</div>
+    <div class="seg-preset-row">
+      <button class="bp" onclick="runSegCompare('frag')">&#9654; Fragmentation Demo</button>
+      <button class="bs" onclick="runSegCompare('compact')">Compaction Demo</button>
+      <button class="bs" onclick="runSegCompare('full')">Memory Full</button>
+      <button class="bs" onclick="runSegCompare('bestworst')">Best vs Worst</button>
+      <button class="bd" onclick="resetSegCompare()">&#10227; Reset</button>
     </div>
-    <div class="legend">
-      <div class="leg-item"><div class="leg-dot" style="background:#f0f0f0"></div>FIFO</div>
-      <div class="leg-item"><div class="leg-dot" style="background:#888"></div>LRU</div>
-      <div class="leg-item"><div class="leg-dot" style="background:#555"></div>Optimal</div>
+    <div id="segEmpty" class="empty">Click a preset to run the same operations across First-Fit, Best-Fit, Worst-Fit, and Next-Fit</div>
+  </div>
+
+  <div id="segResults" style="display:none">
+    <div class="seg-cmp-row" id="segCards"></div>
+    <div class="charts-2col">
+      <div class="pnl">
+        <div class="chart-hdr"><span class="chart-title">External Fragmentation by Strategy</span></div>
+        <div class="chart-wrap"><canvas id="segExtChart"></canvas></div>
+      </div>
+      <div class="pnl">
+        <div class="chart-hdr"><span class="chart-title">Memory Utilization by Strategy</span></div>
+        <div class="chart-wrap"><canvas id="segUtilChart"></canvas></div>
+      </div>
     </div>
-    <div id="raceEmpty" class="empty" style="padding:14px 0;font-size:11px">Run simulation to see fault progression over steps</div>
-    <div style="position:relative;height:200px;display:none" id="raceWrap"><canvas id="raceChart"></canvas></div>
+  </div>
+
+  <!-- Key Concepts -->
+  <div class="pnl">
+    <div class="sec">Key Concepts</div>
+    <div class="concepts">
+      <div class="concept">
+        <div class="concept-title">Page Fault</div>
+        <div class="concept-text">When a referenced page is not in any frame, a page fault occurs. The OS must load it from disk &mdash; an expensive operation.</div>
+      </div>
+      <div class="concept">
+        <div class="concept-title">B&eacute;lady's Anomaly</div>
+        <div class="concept-text">A counter-intuitive phenomenon in FIFO where increasing the number of frames can increase page faults for certain reference strings.</div>
+      </div>
+      <div class="concept">
+        <div class="concept-title">External Fragmentation</div>
+        <div class="concept-text">Free memory is split into small, non-contiguous holes between allocated segments &mdash; enough total free space, but no single hole is large enough.</div>
+      </div>
+    </div>
   </div>
 
 </div>
 
 <script>
-/* ===============================================================
-   ALGORITHMS - Now connected to Python backend
-   =============================================================== */
-
-async function fetchSimulationData(ref, frames, algorithm) {
-  try {
-    const response = await fetch('/api/simulate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reference_string: ref,
-        frames: frames,
-        algorithm: algorithm,
-        max_belady_frames: 10
-      })
-    });
-    
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || 'Server error');
-    }
-    
-    return await response.json();
-  } catch (err) {
-    alert('Simulation Failed: ' + err.message);
-    throw err;
-  }
-}
-
-/* ===============================================================
-   STATE
-   =============================================================== */
-
-let result = null, curStep = -1, selA = 'FIFO', autoInt = null;
-let allResults = null; // Stores results for all algorithms + belady
-let cComp = null, cBelady = null, cRace = null;
-
-/* ===============================================================
-   HELPERS
-   =============================================================== */
-
-function parseRef() {
-  return document.getElementById('refIn').value.trim()
-    .split(/[\s,]+/).map(Number).filter(n => !isNaN(n) && n > 0);
-}
-function getFC() { return parseInt(document.getElementById('fcSlider').value); }
-function getSpd() {
-  const s = parseInt(document.getElementById('spdSlider').value);
-  return Math.round(2200 - (s - 1) * (2100 / 9));
-}
-
-function selAlgo(a) {
-  selA = a;
-  document.querySelectorAll('.atab').forEach(b => b.classList.toggle('on', b.dataset.a === a));
-}
-
-function updateBtns() {
-  const ok = result !== null;
-  const total = ok ? result.steps.length : 0;
-  const s = curStep;
-  $('stepBtn').disabled = !ok || s >= total - 1;
-  $('autoBtn').disabled = !ok;
-  $('fbtn').disabled = !ok || s <= 0;
-  $('pbtn').disabled = !ok || s <= 0;
-  $('nbtn').disabled = !ok || s >= total - 1;
-  $('lbtn').disabled = !ok || s >= total - 1;
-  $('autoBtn').textContent = autoInt ? '\u23F8 Pause' : '\u25B6 Auto';
-}
+var allResults = null;
+var cComp = null, cBelady = null, cRace = null;
 
 function $(id) { return document.getElementById(id); }
-function show(id) { $(id).style.display = ''; }
-function hide(id) { $(id).style.display = 'none'; }
 
-/* ===============================================================
-   RENDER STEP
-   =============================================================== */
-
-function renderStep(si) {
-  if (!result) return;
-  const {steps, frame_count} = result;
-  const s = steps[si];
-  const total = steps.length;
-
-  $('sNum').textContent = `${si + 1}/${total}`;
-  $('sPage').textContent = s.page;
-
-  const pill = $('fPill');
-  if (s.fault) {
-    pill.className = 'fpill is-fault';
-    pill.textContent = '\u25C6 FAULT';
-  } else {
-    pill.className = 'fpill is-hit';
-    pill.textContent = '\u00B7 HIT';
-  }
-
-  const evStat = $('evStat');
-  if (s.evicted !== null && s.evicted !== undefined) {
-    evStat.style.display = '';
-    $('sEvict').textContent = s.evicted;
-  } else {
-    evStat.style.display = 'none';
-  }
-
-  const faultsSoFar = steps.slice(0, si + 1).filter(x => x.fault).length;
-  $('sFaultsSoFar').textContent = faultsSoFar;
-
-  // Frame boxes
-  const fr = $('framesRow');
-  const prev = si > 0 ? steps[si - 1] : null;
-  fr.innerHTML = '';
-  for (let f = 0; f < frame_count; f++) {
-    const page = s.frames[f];
-    const prevPage = prev ? prev.frames[f] : null;
-    const isNew = s.fault && page === s.page && page !== prevPage;
-    const isEmpty = page === null;
-    const box = document.createElement('div');
-    box.className = 'fbox' + (isEmpty ? ' empty' : ' loaded') + (isNew ? ' newly' : '');
-    box.innerHTML = `<span class="fidx">F${f}</span><span class="fpage">${isEmpty ? '\u2014' : page}</span>`;
-    fr.appendChild(box);
-  }
-
-  // Progress
-  $('progFill').style.width = `${((si + 1) / total) * 100}%`;
-
-  // Ref pills
-  const rp = $('refPills');
-  rp.innerHTML = '';
-  steps.forEach((st, i) => {
-    const p = document.createElement('div');
-    let cls = 'rpill';
-    if (i === si) cls += ' cur';
-    else if (i < si) cls += st.fault ? ' fpast' : ' hpast';
-    else cls += ' fut';
-    p.className = cls;
-    p.textContent = st.page;
-    p.title = `Step ${i+1}: Page ${st.page} \u2014 ${st.fault ? 'FAULT' : 'HIT'}`;
-    p.onclick = () => { curStep = i; renderStep(i); updateBtns(); };
-    rp.appendChild(p);
-  });
-
-  // Highlight column in history
-  document.querySelectorAll('.ccol').forEach(el => el.classList.remove('ccol'));
-  document.querySelectorAll(`.c${si}`).forEach(el => el.classList.add('ccol'));
-
-  // Stats (up to current step)
-  const up = steps.slice(0, si + 1);
-  const nf = up.filter(x => x.fault).length;
-  const nh = up.filter(x => !x.fault).length;
-  $('stAlgo').textContent = result.algorithm;
-  $('stF').textContent = nf;
-  $('stH').textContent = nh;
-  $('stR').textContent = `${Math.round(nf / up.length * 100)}%`;
+function parseRef() {
+  return $('refIn').value.trim().split(/[\s,]+/).map(Number).filter(function(n) { return !isNaN(n) && n > 0; });
 }
+function getFC() { return parseInt($('fcSlider').value); }
 
-/* ===============================================================
-   RENDER HISTORY TABLE
-   =============================================================== */
+$('fcSlider').addEventListener('input', function() { $('fcDisp').textContent = this.value; });
+$('refIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') runCompare(); });
 
-function renderHistory() {
-  if (!result) return;
-  const {steps, frame_count} = result;
-  let h = '<table>';
-
-  h += '<tr><td class="rl">&mdash;</td>';
-  steps.forEach((_, i) => { h += `<th>${i + 1}</th>`; });
-  h += '</tr>';
-
-  h += '<tr><td class="rl">Page</td>';
-  steps.forEach((s, i) => {
-    h += `<td class="${s.fault ? 'cf' : 'ch'} c${i}">${s.page}</td>`;
-  });
-  h += '</tr>';
-
-  for (let f = 0; f < frame_count; f++) {
-    h += `<tr><td class="rl">Frame ${f}</td>`;
-    steps.forEach((s, i) => {
-      const page = s.frames[f];
-      if (page === null) h += `<td class="ce c${i}">&mdash;</td>`;
-      else if (s.fault && page === s.page) h += `<td class="cn c${i}">${page}</td>`;
-      else h += `<td class="ck c${i}">${page}</td>`;
-    });
-    h += '</tr>';
-  }
-
-  h += '<tr><td class="rl">Evicted</td>';
-  steps.forEach((s, i) => {
-    if (s.evicted !== null && s.evicted !== undefined)
-      h += `<td class="cv c${i}">${s.evicted}</td>`;
-    else
-      h += `<td class="cnd c${i}">&middot;</td>`;
-  });
-  h += '</tr>';
-
-  h += '<tr><td class="rl">Fault?</td>';
-  steps.forEach((s, i) => {
-    h += `<td class="${s.fault ? 'cfy' : 'cfn'} c${i}">${s.fault ? 'F' : '\u00B7'}</td>`;
-  });
-  h += '</tr>';
-
-  h += '</table>';
-  $('histTable').innerHTML = h;
-}
-
-/* ===============================================================
-   CHARTS
-   =============================================================== */
-
-const CHART_FONT = "'Geist Mono','Courier New',monospace";
-const CHART_AXIS = {
+var CHART_FONT = "'Geist Mono','Courier New',monospace";
+var CHART_AXIS = {
   ticks: { color:'#555', font:{family:CHART_FONT, size:10} },
   grid: { color:'rgba(255,255,255,.04)' },
   border: { color:'#2a2a2a' }
 };
 
-function renderCharts() {
+function runCompare() {
+  var ref = parseRef();
+  var fc = getFC();
+  if (ref.length === 0) { alert('Enter a valid reference string'); return; }
+
+  var btn = document.querySelector('.bp');
+  btn.innerHTML = '&#8987; Loading...';
+  btn.disabled = true;
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/simulate', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      btn.innerHTML = '&#9654; Compare All';
+      btn.disabled = false;
+      if (xhr.status === 200) {
+        allResults = JSON.parse(xhr.responseText);
+        renderComparison();
+      } else {
+        alert('Error: ' + xhr.responseText);
+      }
+    }
+  };
+  xhr.send(JSON.stringify({
+    reference_string: ref,
+    frames: fc,
+    algorithm: 'FIFO',
+    max_belady_frames: 10
+  }));
+}
+
+function renderComparison() {
   if (!allResults) return;
 
-  const fifo = allResults.fifo;
-  const lru  = allResults.lru;
-  const opt  = allResults.optimal;
+  $('cmpEmpty').style.display = 'none';
+  $('cmpResults').style.display = '';
 
+  var fifo = allResults.fifo;
+  var lru = allResults.lru;
+  var opt = allResults.optimal;
+
+  // Find best
+  var minF = Math.min(fifo.total_faults, lru.total_faults, opt.total_faults);
+
+  // Update cards
+  $('cf-fifo').textContent = fifo.total_faults;
+  $('cs-fifo').textContent = fifo.total_faults + ' faults / ' + fifo.total_hits + ' hits (' + Math.round(fifo.total_faults / fifo.steps.length * 100) + '%)';
+  $('cc-fifo').className = 'cmp-card' + (fifo.total_faults === minF ? ' cc-best' : '');
+
+  $('cf-lru').textContent = lru.total_faults;
+  $('cs-lru').textContent = lru.total_faults + ' faults / ' + lru.total_hits + ' hits (' + Math.round(lru.total_faults / lru.steps.length * 100) + '%)';
+  $('cc-lru').className = 'cmp-card' + (lru.total_faults === minF ? ' cc-best' : '');
+
+  $('cf-opt').textContent = opt.total_faults;
+  $('cs-opt').textContent = opt.total_faults + ' faults / ' + opt.total_hits + ' hits (' + Math.round(opt.total_faults / opt.steps.length * 100) + '%)';
+  $('cc-opt').className = 'cmp-card' + (opt.total_faults === minF ? ' cc-best' : '');
+
+  // Destroy old charts
   if (cComp) { cComp.destroy(); cComp = null; }
   if (cBelady) { cBelady.destroy(); cBelady = null; }
   if (cRace) { cRace.destroy(); cRace = null; }
 
-  // --- Comparison chart ---
-  hide('compEmpty'); show('compWrap');
+  // Comparison bar chart
   cComp = new Chart($('compChart'), {
     type: 'bar',
     data: {
       labels: ['FIFO','LRU','Optimal'],
-      datasets: [
-        {
-          label:'Faults',
-          data:[fifo.total_faults, lru.total_faults, opt.total_faults],
-          backgroundColor:['#f0f0f0','#888','#444'],
-          borderRadius:2, borderSkipped:false
-        },
-        {
-          label:'Hits',
-          data:[fifo.total_hits, lru.total_hits, opt.total_hits],
-          backgroundColor:['rgba(240,240,240,.12)','rgba(136,136,136,.12)','rgba(68,68,68,.18)'],
-          borderColor:['rgba(240,240,240,.3)','rgba(136,136,136,.3)','rgba(68,68,68,.3)'],
-          borderWidth:1, borderRadius:2, borderSkipped:false
-        }
-      ]
+      datasets: [{
+        label:'Faults',
+        data:[fifo.total_faults, lru.total_faults, opt.total_faults],
+        backgroundColor:['#f0f0f0','#888','#444'],
+        borderRadius:2, borderSkipped:false
+      },{
+        label:'Hits',
+        data:[fifo.total_hits, lru.total_hits, opt.total_hits],
+        backgroundColor:['rgba(240,240,240,.12)','rgba(136,136,136,.12)','rgba(68,68,68,.18)'],
+        borderColor:['rgba(240,240,240,.3)','rgba(136,136,136,.3)','rgba(68,68,68,.3)'],
+        borderWidth:1, borderRadius:2, borderSkipped:false
+      }]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
@@ -555,50 +416,47 @@ function renderCharts() {
     }
   });
 
-  // --- Belady's anomaly chart ---
-  const bel = allResults.belady;
-  const anomalyFs = new Set();
-  bel.anomaly_at.forEach(([,b]) => anomalyFs.add(b));
+  // Belady's chart
+  var bel = allResults.belady;
+  var anomalyFs = {};
+  for (var a = 0; a < bel.anomaly_at.length; a++) { anomalyFs[bel.anomaly_at[a][1]] = true; }
   $('anomalyBadge').style.display = bel.anomaly_found ? '' : 'none';
-  hide('beladyEmpty'); show('beladyWrap');
 
-  const fLabels = Object.keys(bel.fault_counts).map(Number);
-  const fData   = fLabels.map(f => bel.fault_counts[f]);
-  const ptColors = fLabels.map(f => anomalyFs.has(f) ? '#ff5555' : '#f0f0f0');
-  const ptSizes  = fLabels.map(f => anomalyFs.has(f) ? 7 : 3);
+  var fLabels = Object.keys(bel.fault_counts).map(Number);
+  var fData = [], ptColors = [], ptSizes = [];
+  for (var i = 0; i < fLabels.length; i++) {
+    fData.push(bel.fault_counts[fLabels[i]]);
+    ptColors.push(anomalyFs[fLabels[i]] ? '#ff5555' : '#f0f0f0');
+    ptSizes.push(anomalyFs[fLabels[i]] ? 7 : 3);
+  }
 
   cBelady = new Chart($('beladyChart'), {
     type:'line',
-    data:{
-      labels:fLabels,
-      datasets:[{
-        label:'Faults',
-        data:fData,
-        borderColor:'#f0f0f0',
-        backgroundColor:'rgba(240,240,240,.04)',
-        pointBackgroundColor:ptColors,
-        pointBorderColor:ptColors,
-        pointRadius:ptSizes,
-        tension:.2, borderWidth:1.5, fill:true
-      }]
-    },
+    data:{ labels:fLabels, datasets:[{
+      label:'Faults', data:fData,
+      borderColor:'#f0f0f0', backgroundColor:'rgba(240,240,240,.04)',
+      pointBackgroundColor:ptColors, pointBorderColor:ptColors, pointRadius:ptSizes,
+      tension:.2, borderWidth:1.5, fill:true
+    }]},
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false} },
       scales:{
-        x:{ ...CHART_AXIS, title:{display:true,text:'Frames',color:'#555',font:{family:CHART_FONT,size:9}} },
-        y:{ ...CHART_AXIS, title:{display:true,text:'Faults',color:'#555',font:{family:CHART_FONT,size:9}} }
+        x:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Frames',color:'#555',font:{family:CHART_FONT,size:9}}}),
+        y:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Faults',color:'#555',font:{family:CHART_FONT,size:9}}})
       }
     }
   });
 
-  // --- Fault race chart ---
+  // Fault race chart
   function cumFaults(r) {
-    let c = 0;
-    return r.steps.map(s => { if (s.fault) c++; return c; });
+    var arr = [], c = 0;
+    for (var i = 0; i < r.steps.length; i++) { if (r.steps[i].fault) c++; arr.push(c); }
+    return arr;
   }
-  hide('raceEmpty'); show('raceWrap');
-  const stepLbls = fifo.steps.map((_,i) => i + 1);
+  var stepLbls = [];
+  for (var i = 0; i < fifo.steps.length; i++) { stepLbls.push(i + 1); }
+
   cRace = new Chart($('raceChart'), {
     type:'line',
     data:{
@@ -613,117 +471,194 @@ function renderCharts() {
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false} },
       scales:{
-        x:{
-          ...CHART_AXIS,
-          title:{display:true,text:'Step',color:'#555',font:{family:CHART_FONT,size:9}},
-          ticks:{...CHART_AXIS.ticks, maxTicksLimit:14}
-        },
-        y:{
-          ...CHART_AXIS,
-          title:{display:true,text:'Cumulative Faults',color:'#555',font:{family:CHART_FONT,size:9}}
-        }
+        x:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Step',color:'#555',font:{family:CHART_FONT,size:9}}, ticks:Object.assign({}, CHART_AXIS.ticks, {maxTicksLimit:14})}),
+        y:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Cumulative Faults',color:'#555',font:{family:CHART_FONT,size:9}}})
       }
     }
   });
 }
 
-/* ===============================================================
-   ACTIONS
-   =============================================================== */
+function resetCompare() {
+  allResults = null;
+  $('cmpEmpty').style.display = '';
+  $('cmpResults').style.display = 'none';
+  if (cComp) { cComp.destroy(); cComp = null; }
+  if (cBelady) { cBelady.destroy(); cBelady = null; }
+  if (cRace) { cRace.destroy(); cRace = null; }
+  $('anomalyBadge').style.display = 'none';
+}
 
-async function runSim() {
-  stopAuto();
-  const ref = parseRef();
-  const fc = getFC();
-  if (ref.length === 0) { alert('Enter a valid reference string (positive integers)'); return; }
+Chart.defaults.color = '#555';
 
-  // Disable UI while fetching
-  const runBtn = document.querySelector('.bp');
-  const originalText = runBtn.innerHTML;
-  runBtn.innerHTML = '&#8987; Loading...';
-  runBtn.disabled = true;
+// --- Segmentation Strategy Comparison ---
+var SEG_PRESETS = {
+  'frag': {
+    totalMem:1024, blockSize:16,
+    operations:[
+      {action:'alloc',name:'A',size:200},
+      {action:'alloc',name:'B',size:300},
+      {action:'alloc',name:'C',size:400},
+      {action:'free',name:'B'},
+      {action:'alloc',name:'D',size:100}
+    ]
+  },
+  'compact': {
+    totalMem:2000, blockSize:16,
+    operations:[
+      {action:'alloc',name:'A',size:500},
+      {action:'alloc',name:'B',size:500},
+      {action:'alloc',name:'C',size:500},
+      {action:'free',name:'A'},
+      {action:'free',name:'C'},
+      {action:'compact'}
+    ]
+  },
+  'full': {
+    totalMem:4096, blockSize:16,
+    operations:[
+      {action:'alloc',name:'A',size:1000},
+      {action:'alloc',name:'B',size:1000},
+      {action:'alloc',name:'C',size:1000},
+      {action:'alloc',name:'D',size:1000},
+      {action:'alloc',name:'E',size:500}
+    ]
+  },
+  'bestworst': {
+    totalMem:2000, blockSize:16,
+    operations:[
+      {action:'alloc',name:'A',size:200},
+      {action:'alloc',name:'B',size:800},
+      {action:'alloc',name:'C',size:500},
+      {action:'free',name:'A'},
+      {action:'free',name:'B'},
+      {action:'alloc',name:'D',size:150}
+    ]
+  }
+};
 
-  try {
-    const data = await fetchSimulationData(ref, fc, selA);
-    allResults = data;
-    result = data.current;
+var STRATEGIES = ['first_fit','best_fit','worst_fit','next_fit'];
+var STRAT_LABELS = {'first_fit':'First-Fit','best_fit':'Best-Fit','worst_fit':'Worst-Fit','next_fit':'Next-Fit'};
+var cSegExt = null, cSegUtil = null;
 
-    curStep = 0;
-    hide('stepEmpty'); show('stepContent');
-    hide('histEmpty'); show('histContent');
+function runSegCompare(presetKey) {
+  var preset = SEG_PRESETS[presetKey];
+  if (!preset) return;
 
-    renderHistory();
-    renderStep(0);
-    renderCharts();
-    updateBtns();
-  } catch (err) {
-    // Error handled in fetchSimulationData
-    console.error(err);
-  } finally {
-    runBtn.innerHTML = originalText;
-    runBtn.disabled = false;
+  var pending = STRATEGIES.length;
+  var results = {};
+
+  for (var s = 0; s < STRATEGIES.length; s++) {
+    (function(strat) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/segmentation', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            var snaps = JSON.parse(xhr.responseText);
+            results[strat] = snaps.length > 0 ? snaps[snaps.length - 1] : null;
+          }
+          pending--;
+          if (pending === 0) renderSegComparison(results);
+        }
+      };
+      xhr.send(JSON.stringify({
+        operations: preset.operations,
+        strategy: strat,
+        total_memory: preset.totalMem,
+        block_size: preset.blockSize
+      }));
+    })(STRATEGIES[s]);
   }
 }
 
-function stepFwd() {
-  if (!result || curStep >= result.steps.length - 1) return;
-  curStep++;
-  renderStep(curStep);
-  updateBtns();
+function renderSegComparison(results) {
+  $('segEmpty').style.display = 'none';
+  $('segResults').style.display = '';
+
+  var cards = $('segCards');
+  cards.innerHTML = '';
+
+  var minExt = Infinity;
+  var stratData = [];
+  for (var i = 0; i < STRATEGIES.length; i++) {
+    var strat = STRATEGIES[i];
+    var snap = results[strat];
+    var f = snap && snap.fragmentation ? snap.fragmentation : null;
+    var ext = f ? f.external_frag : 0;
+    if (ext < minExt) minExt = ext;
+    stratData.push({strat:strat, snap:snap, frag:f, ext:ext});
+  }
+
+  var extData = [], utilData = [], labels = [];
+  for (var i = 0; i < stratData.length; i++) {
+    var d = stratData[i];
+    var f = d.frag;
+    var isBest = d.ext === minExt;
+    labels.push(STRAT_LABELS[d.strat]);
+    extData.push(f ? f.external_frag : 0);
+    utilData.push(f ? f.utilization : 0);
+
+    var card = document.createElement('div');
+    card.className = 'seg-card' + (isBest ? ' best-card' : '');
+    var intFrag = f ? f.internal_frag : 0;
+    var used = f ? f.used : 0;
+    var total = f ? f.total : 0;
+    var util = f ? f.utilization : 0;
+    card.innerHTML = '<div class="seg-card-name">' + STRAT_LABELS[d.strat] + '</div>' +
+      '<div class="seg-card-val">' + (d.ext) + 'B</div>' +
+      '<div class="seg-card-sub">external fragmentation</div>' +
+      '<div class="seg-detail-row">' +
+        '<div class="seg-detail warn">Int.Frag: <span>' + intFrag + 'B</span></div>' +
+        '<div class="seg-detail">Used: <span>' + used + '/' + total + '</span></div>' +
+      '</div>' +
+      '<div class="seg-detail-row">' +
+        '<div class="seg-detail">Util: <span>' + util + '%</span></div>' +
+        '<div class="seg-detail">' + (isBest ? '\u2605 BEST' : '') + '</div>' +
+      '</div>';
+    cards.appendChild(card);
+  }
+
+  // Charts
+  if (cSegExt) { cSegExt.destroy(); cSegExt = null; }
+  if (cSegUtil) { cSegUtil.destroy(); cSegUtil = null; }
+
+  var barColors = ['#f0f0f0','#aaa','#777','#555'];
+
+  cSegExt = new Chart($('segExtChart'), {
+    type:'bar',
+    data:{
+      labels:labels,
+      datasets:[{label:'Ext.Frag (bytes)',data:extData,backgroundColor:barColors,borderRadius:2,borderSkipped:false}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:CHART_AXIS,y:Object.assign({},CHART_AXIS,{title:{display:true,text:'Bytes',color:'#555',font:{family:CHART_FONT,size:9}}})}
+    }
+  });
+
+  cSegUtil = new Chart($('segUtilChart'), {
+    type:'bar',
+    data:{
+      labels:labels,
+      datasets:[{label:'Utilization %',data:utilData,backgroundColor:barColors,borderRadius:2,borderSkipped:false}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:CHART_AXIS,y:Object.assign({},CHART_AXIS,{title:{display:true,text:'%',color:'#555',font:{family:CHART_FONT,size:9}},max:100})}
+    }
+  });
 }
 
-function nav(dir) {
-  if (!result) return;
-  const total = result.steps.length;
-  if (dir === 'first') curStep = 0;
-  else if (dir === 'prev')  curStep = Math.max(0, curStep - 1);
-  else if (dir === 'next')  curStep = Math.min(total - 1, curStep + 1);
-  else if (dir === 'last')  curStep = total - 1;
-  renderStep(curStep);
-  updateBtns();
+function resetSegCompare() {
+  $('segEmpty').style.display = '';
+  $('segResults').style.display = 'none';
+  $('segCards').innerHTML = '';
+  if (cSegExt) { cSegExt.destroy(); cSegExt = null; }
+  if (cSegUtil) { cSegUtil.destroy(); cSegUtil = null; }
 }
-
-function toggleAuto() {
-  autoInt ? stopAuto() : startAuto();
-}
-function startAuto() {
-  if (!result) return;
-  autoInt = setInterval(() => {
-    if (curStep >= result.steps.length - 1) { stopAuto(); return; }
-    stepFwd();
-  }, getSpd());
-  updateBtns();
-}
-function stopAuto() {
-  if (autoInt) { clearInterval(autoInt); autoInt = null; }
-  updateBtns();
-}
-
-function resetSim() {
-  stopAuto();
-  result = null; allResults = null; curStep = -1;
-  show('stepEmpty');  hide('stepContent');
-  show('histEmpty');  hide('histContent');
-  show('compEmpty');  hide('compWrap');
-  show('beladyEmpty'); hide('beladyWrap');
-  show('raceEmpty');  hide('raceWrap');
-  $('anomalyBadge').style.display = 'none';
-  ['stAlgo','stF','stH','stR'].forEach(id => $(id).textContent = '\u2014');
-  if (cComp)   { cComp.destroy();   cComp   = null; }
-  if (cBelady) { cBelady.destroy(); cBelady = null; }
-  if (cRace)   { cRace.destroy();   cRace   = null; }
-  updateBtns();
-}
-
-/* ===============================================================
-   EVENT LISTENERS & INIT
-   =============================================================== */
-
-$('fcSlider').addEventListener('input', function() { $('fcDisp').textContent = this.value; });
-$('refIn').addEventListener('keydown', e => { if (e.key === 'Enter') runSim(); });
-
-Chart.defaults.color = '#555';
-updateBtns();
 </script>
 </body>
 </html>
