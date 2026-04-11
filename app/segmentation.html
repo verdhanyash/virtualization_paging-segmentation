@@ -1,574 +1,1094 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Segmentation &mdash; Virtual Memory Simulator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Live Segmentation &mdash; Virtual Memory Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0a0a0a;--bg2:#111;--bg3:#161616;--bg4:#1c1c1c;
   --b:#252525;--b2:#333;--b3:#444;
-  --t:#f0f0f0;--t2:#777;--t3:#444;--t4:#2a2a2a;
-  --white:#f0f0f0;
+  --t:#f0f0f0;--t2:#888;--t3:#555;--t4:#2a2a2a;
+  --white:#ffffff;
 }
-body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh}
+body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh;}
 
 /* Nav */
-nav{padding:16px 40px;border-bottom:1px solid var(--b);display:flex;gap:6px;align-items:center}
+nav{padding:16px 40px;border-bottom:1px solid var(--b);display:flex;gap:6px;align-items:center;background:var(--bg);}
 nav a{color:var(--t2);text-decoration:none;font-size:11px;padding:6px 14px;border-radius:3px;letter-spacing:.05em;text-transform:uppercase;transition:all .15s}
-nav a:hover{color:var(--t)}
-nav a.active{color:var(--t);background:var(--bg3);border:1px solid var(--b)}
+nav a:hover{color:var(--t);background:var(--bg3);}
+nav a.active{color:var(--bg);background:var(--t);font-weight:600;}
 nav .sep{color:var(--t4);margin:0 2px}
 
-.app{max-width:1120px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:14px}
+.app{max-width:1160px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:16px}
 
 /* Header */
-.hdr{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--b)}
-.hdr h1{font-size:14px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
-.algo-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:3px;font-size:10px;color:var(--white);text-transform:uppercase;letter-spacing:.1em}
+.hdr{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--b)}
+.hdr h1{font-size:14px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--white);}
+.algo-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--bg2);border:1px solid var(--b2);border-radius:3px;font-size:10px;color:var(--t);text-transform:uppercase;letter-spacing:.1em;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:livePulse 2s ease-in-out infinite;display:inline-block}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 6px #4ade80}50%{opacity:.3;box-shadow:none}}
 
-/* Panel */
-.pnl{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:16px}
-.sec{font-size:9px;color:var(--t2);letter-spacing:.12em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--b);margin-bottom:14px}
+/* Panel (Flat Jet Black) */
+.pnl{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:20px;transition:border-color 0.2s;}
+.pnl:hover{border-color:var(--b2);}
+.sec{font-size:10px;color:var(--t2);letter-spacing:.12em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--b);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.sec-right{font-size:10px;color:var(--t3);letter-spacing:.06em;text-transform:none;font-weight:400}
 
 /* Description */
-.algo-desc{background:var(--bg3);border-radius:3px;padding:16px 20px;font-size:12px;line-height:1.7;color:var(--t2);border-left:3px solid var(--b2)}
-.algo-desc strong{color:var(--t)}
-.algo-desc code{background:var(--bg);padding:2px 6px;border-radius:2px;font-size:11px;color:var(--t)}
+.algo-desc{background:var(--bg3);border-radius:4px;padding:16px 20px;font-size:12px;line-height:1.7;color:var(--t2);border-left:3px solid var(--b2);}
+.algo-desc strong{color:var(--t);font-weight:500}
+.algo-desc code{background:var(--bg);padding:2px 6px;border-radius:3px;font-size:11px;color:var(--t);border:1px solid var(--b);}
+
+/* Top Split Layout */
+.top-split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* Process List */
+.proc-list{max-height:300px;overflow-y:auto;padding-right:4px}
+.proc-list::-webkit-scrollbar{width:4px}
+.proc-list::-webkit-scrollbar-thumb{background:var(--b3);border-radius:2px}
+.proc-item{display:grid;grid-template-columns:12px 1fr auto auto auto;gap:8px;align-items:center;padding:7px 6px;border-bottom:1px solid var(--b3);font-size:11px;transition:background .12s;cursor:default}
+.proc-item:hover{background:var(--bg3)}
+.proc-item:last-child{border-bottom:none}
+.proc-swatch{width:10px;height:10px;border-radius:2px;border:1px solid rgba(255,255,255,.1)}
+.proc-name{color:var(--t);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proc-inst{color:var(--t3);font-size:10px;text-align:right;min-width:50px}
+.proc-mem{color:var(--t2);text-align:right;min-width:65px;font-variant-numeric:tabular-nums}
+.proc-pct{color:var(--t3);text-align:right;min-width:42px;font-size:10px}
 
 /* Controls */
 .ctrl-row{display:flex;gap:16px;align-items:end;flex-wrap:wrap}
-.field{display:flex;flex-direction:column;gap:5px}
-.field.grow{flex:1;min-width:160px}
+.field{display:flex;flex-direction:column;gap:6px}
 .lbl{font-size:9px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase}
-input[type=text],input[type=number]{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:8px 10px;font-family:inherit;font-size:13px;border-radius:2px;outline:none;width:100%}
-input[type=text]:focus,input[type=number]:focus{border-color:var(--b3)}
-select{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:8px 10px;font-family:inherit;font-size:13px;border-radius:2px;outline:none}
+input[type=text],input[type=number],select{background:var(--bg);border:1px solid var(--b3);color:var(--t);padding:8px 12px;font-family:inherit;font-size:12px;border-radius:3px;outline:none;transition:border-color .2s;}
+input:focus,select:focus{border-color:var(--t2);}
 
-button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;border:none}
-.bp{background:var(--white);color:#0a0a0a}
-.bp:hover{opacity:.85}
-.bs{background:transparent;color:var(--t);border:1px solid var(--b2)}
-.bs:hover:not(:disabled){border-color:var(--b3)}
+button{padding:8px 16px;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:3px;transition:all .15s;border:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.bp{background:var(--white);color:var(--bg);}
+.bp:hover{background:#d4d4d4;}
+.bs{background:transparent;color:var(--t);border:1px solid var(--b3)}
+.bs:hover:not(:disabled){background:var(--bg3);border-color:var(--t2);}
 .bd{background:transparent;color:var(--t2);border:1px solid var(--b)}
-.bd:hover:not(:disabled){border-color:var(--b3);color:var(--t)}
-button:disabled{opacity:.28;cursor:not-allowed}
-.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.bd:hover:not(:disabled){border-color:var(--b3);color:var(--white)}
+button:disabled{opacity:.3;cursor:not-allowed}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
 
 /* Strategy Tabs */
-.algo-tabs{display:flex}
-.atab{padding:7px 16px;background:transparent;border:1px solid var(--b2);color:var(--t2);font-family:inherit;font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .15s}
-.atab:not(:first-child){border-left:none}
-.atab:first-child{border-radius:2px 0 0 2px}
-.atab:last-child{border-radius:0 2px 2px 0}
-.atab.on{background:var(--white);color:#0a0a0a;border-color:var(--white)}
-.atab:hover:not(.on){border-color:var(--b3);color:var(--t)}
+.algo-tabs{display:flex;background:var(--bg);border:1px solid var(--b2);border-radius:3px;}
+.atab{padding:8px 16px;background:transparent;border:none;color:var(--t2);border-radius:2px;border-right:1px solid var(--b);font-size:10px}
+.atab:last-child{border-right:none;}
+.atab.on{background:var(--white);color:#000;}
+.atab:hover:not(.on){color:var(--white);background:var(--bg3);}
 
-/* Memory Map */
-.memory-map{border:1px solid var(--b2);height:54px;width:100%;display:flex;background:var(--bg4);border-radius:3px;overflow:hidden;position:relative}
-.mem-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;overflow:hidden;white-space:nowrap;text-shadow:1px 1px 2px rgba(0,0,0,.8);border-right:1px solid rgba(0,0,0,.3);color:white;transition:width .3s ease}
-.mem-hole{background:var(--bg3);background-image:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(255,255,255,.03) 8px,rgba(255,255,255,.03) 16px);border-right:1px dashed var(--b2);color:var(--t3);text-shadow:none}
+/* Composition Bar */
+.comp-wrap{margin:16px 0}
+.comp-bar{display:flex;height:32px;border:1px solid var(--b2);border-radius:3px;overflow:hidden;background:var(--bg)}
+.comp-seg{height:100%;transition:filter .15s;min-width:2px;cursor:pointer;position:relative}
+.comp-seg:hover{filter:brightness(1.4);z-index:2}
+.comp-hole{height:100%;background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 3px,var(--b) 3px,var(--b) 6px);min-width:3px;border-left:1px solid var(--b3);border-right:1px solid var(--b3)}
+.comp-free{height:100%;background:var(--bg3);min-width:2px}
+.comp-frag{height:100%;background:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.08) 2px,rgba(255,255,255,.08) 4px);min-width:1px;cursor:pointer}
+.comp-frag:hover{filter:brightness(1.5)}
+
+.comp-legend{display:flex;gap:16px;margin-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t2)}
+.comp-legend-item{display:flex;align-items:center;gap:6px}
+.comp-legend-swatch{width:10px;height:10px;border-radius:1px;border:1px solid var(--b2)}
+
+/* TM Chart */
+.tm-chart-container{width:100%;height:140px;border:1px solid var(--b2);border-radius:3px;position:relative;background:var(--bg);margin-bottom:20px}
+.tm-chart{width:100%;height:100%;display:block}
 
 /* Stats */
-.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.sc{background:var(--bg3);border-radius:3px;padding:12px 14px;text-align:center}
-.sc-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
-.sc-val{font-size:22px;font-weight:600}
-.sv-warn{color:#ff9800}
-.sv-err{color:#f44336}
+.stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.sc{background:var(--bg3);border:1px solid var(--b);border-left:2px solid var(--b3);border-radius:3px;padding:14px;text-align:left;transition:all .2s}
+.sc:hover{border-left-color:var(--t2);background:var(--bg4);}
+.sc-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.sc-val{font-size:20px;font-weight:500;letter-spacing:0;color:var(--t);transition:color .3s}
+.sc-warn{color:#e0a040!important}
+.sc-err{color:#c06060!important}
+
+/* Block Grid */
+.tm-grid{display:grid;gap:1px;background:var(--bg);border:1px solid var(--b2);border-radius:3px;padding:4px;max-height:220px;overflow-y:auto;margin-top:16px}
+.tm-grid::-webkit-scrollbar{width:4px}
+.tm-grid::-webkit-scrollbar-thumb{background:var(--b3);border-radius:2px}
+.block-cell{height:12px;border-radius:1px;transition:transform .1s;animation:fadeIn .2s}
+@keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+.block-cell:hover{filter:brightness(1.3);transform:scale(1.15);z-index:2;position:relative}
+.block-free{background:var(--bg3)}
+.block-frag{background:repeating-linear-gradient(45deg,var(--b2),var(--b2) 2px,transparent 2px,transparent 4px)}
+.block-hole{background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 2px,var(--b) 2px,var(--b) 4px)}
 
 /* Tables */
-.tbl-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tbl-row{display:grid;grid-template-columns:1.4fr 1fr;gap:20px}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}
-th{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;font-weight:400;text-align:left;padding:8px;border-bottom:1px solid var(--b)}
-td{padding:8px;border-bottom:1px solid var(--b)}
+th{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;font-weight:400;text-align:left;padding:10px 8px;border-bottom:1px solid var(--b)}
+td{padding:8px 8px;border-bottom:1px solid var(--b3)}
+tr:hover td{background:var(--bg3)}
 td.num,th.num{text-align:right}
 
 /* History */
-.hist-entry{display:flex;padding:8px 0;border-bottom:1px solid var(--b);font-size:12px;gap:12px}
+.hist-entry{display:flex;padding:8px;border-bottom:1px solid var(--b3);font-size:11px;gap:12px;}
+.hist-entry:hover{background:var(--bg3)}
 .hist-entry .step-num{width:36px;color:var(--t3);flex-shrink:0}
-.hist-entry .step-op{flex:1}
-.hist-entry .step-res{width:90px;text-align:right;flex-shrink:0}
-.hist-entry.is-err{color:#f44336}
-.hist-scroll{max-height:200px;overflow-y:auto}
+.hist-entry .step-op{flex:1;color:var(--t)}
+.hist-entry .step-res{width:100px;text-align:right;flex-shrink:0;color:var(--t2)}
+.hist-entry.is-err{color:#ddd}
+.hist-entry.is-err .step-res{color:#c06060}
+.hist-scroll{max-height:200px;overflow-y:auto;padding-right:8px}
+.hist-scroll::-webkit-scrollbar{width:4px}
+.hist-scroll::-webkit-scrollbar-thumb{background:var(--b3);border-radius:2px}
+
+/* Preset Row */
+.preset-row{display:flex;gap:8px;flex-wrap:wrap}
 
 /* Empty */
-.empty{text-align:center;padding:28px 0;color:var(--t3);font-size:11px}
+.empty{text-align:center;padding:28px 0;color:var(--t3);font-size:11px;border:1px dashed var(--b2);border-radius:3px;}
 
-/* Presets */
-.preset-row{display:flex;gap:6px;flex-wrap:wrap}
+/* Loading overlay */
+.loading-bar{position:absolute;top:0;left:0;height:2px;background:var(--white);animation:loadSlide 1.5s ease-in-out infinite;border-radius:1px;width:30%}
+@keyframes loadSlide{0%{left:-30%}100%{left:100%}}
 
-@media(max-width:720px){
-  .ctrl-row{flex-direction:column}
-  .stats-row{grid-template-columns:repeat(2,1fr)}
+@media(max-width:768px){
+  .top-split{grid-template-columns:1fr}
+  .ctrl-row{flex-direction:column;align-items:stretch}
+  .stats-row{grid-template-columns:repeat(3,1fr)}
   .tbl-row{grid-template-columns:1fr}
 }
 </style>
 </head>
+
 <body>
 
-<nav>
-  <a href="/">Overview</a>
-  <span class="sep">|</span>
-  <a href="/fifo">FIFO</a>
-  <a href="/lru">LRU</a>
-  <a href="/optimal">Optimal</a>
-  <span class="sep">|</span>
-  <a href="/segmentation" class="active">Segmentation</a>
-</nav>
+  <nav>
+    <a href="/">Overview</a>
+    <span class="sep">|</span>
+    <a href="/fifo">FIFO</a>
+    <a href="/lru">LRU</a>
+    <a href="/optimal">Optimal</a>
+    <span class="sep">|</span>
+    <a href="/segmentation" class="active">Segmentation</a>
+  </nav>
 
-<div class="app">
+  <div class="app">
 
-  <div class="hdr">
-    <h1>Segmentation &mdash; Memory Allocation Simulator</h1>
-    <span class="algo-badge">&#9679; Variable-Size Segments</span>
-  </div>
+    <div class="hdr">
+      <h1>Live Memory Segmentation Simulator</h1>
+      <span class="algo-badge"><span class="live-dot"></span> Real-Time Windows Processes</span>
+    </div>
 
-  <!-- Description -->
-  <div class="algo-desc">
-    <strong>How segmentation works:</strong> Memory is divided into variable-size <strong>segments</strong> (code, stack, heap, etc.). When allocating, the OS finds a suitable free hole using a <strong>placement strategy</strong> (First-Fit, Best-Fit, Worst-Fit, or Next-Fit). Freeing a segment creates a hole. Over time, holes fragment memory &mdash; <strong>external fragmentation</strong>. Block alignment causes <strong>internal fragmentation</strong> (wasted bytes). <code>Compaction</code> slides segments left to merge all holes.
-  </div>
+    <!-- Description -->
+    <div class="algo-desc">
+      <strong>How it works:</strong> This simulator reads <strong>real processes</strong> running on your Windows machine
+      and maps their memory into segments (<code>.text</code>, <code>.heap</code>, <code>.data</code>, <code>.stack</code>).
+      Each process's working set is proportionally scaled and allocated using a <strong>placement strategy</strong>
+      (First-Fit, Best-Fit, Worst-Fit, or Next-Fit). Freeing segments creates <strong>holes</strong> &mdash;
+      <strong>external fragmentation</strong>. Block alignment causes <strong>internal fragmentation</strong>.
+      Use <code>Compact</code> to defragment by sliding all segments left.
+    </div>
 
-  <!-- Controls -->
-  <div class="pnl">
-    <div class="sec">Controls</div>
-    <div class="ctrl-row">
-      <div class="field">
-        <span class="lbl">Strategy</span>
-        <div class="algo-tabs" id="strategy-tabs">
-          <button class="atab on" data-strategy="first_fit" onclick="setStrategy('first_fit')">First-Fit</button>
-          <button class="atab" data-strategy="best_fit" onclick="setStrategy('best_fit')">Best-Fit</button>
-          <button class="atab" data-strategy="worst_fit" onclick="setStrategy('worst_fit')">Worst-Fit</button>
-          <button class="atab" data-strategy="next_fit" onclick="setStrategy('next_fit')">Next-Fit</button>
+    <!-- Top Split: Process List + Controls -->
+    <div class="top-split">
+
+      <!-- Live Process Panel -->
+      <div class="pnl">
+        <div class="sec">
+          Live Windows Processes
+          <span class="sec-right" id="proc-count-badge">&mdash;</span>
+        </div>
+        <div class="proc-list" id="proc-list">
+          <div class="empty">Loading real process data&hellip;</div>
         </div>
       </div>
-      <div class="field">
-        <span class="lbl">Total Memory</span>
-        <input type="number" id="inp-total-mem" value="4096" style="width:90px">
-      </div>
-      <div class="field">
-        <span class="lbl">Block Size</span>
-        <input type="number" id="inp-block-size" value="16" style="width:70px">
-      </div>
-    </div>
 
-    <div class="ctrl-row" style="margin-top:14px">
-      <div class="field">
-        <span class="lbl">Segment Name</span>
-        <input type="text" id="inp-seg-name" placeholder="e.g. code" style="width:120px">
-      </div>
-      <div class="field">
-        <span class="lbl">Size (Bytes)</span>
-        <input type="number" id="inp-seg-size" placeholder="200" style="width:100px">
-      </div>
-      <div class="field">
-        <span class="lbl">Actions</span>
-        <div class="btn-row">
-          <button class="bp" onclick="allocSegment()">+ Allocate</button>
-          <select id="sel-free-name" style="width:90px"></select>
-          <button class="bs" onclick="freeSegment()">Free</button>
-          <button class="bs" onclick="compactMemory()">&#8635; Compact</button>
-          <button class="bd" onclick="resetAll()">&#10227; Reset</button>
+      <!-- Controls Panel -->
+      <div class="pnl">
+        <div class="sec">Controls</div>
+        <div class="ctrl-row">
+          <div class="field">
+            <span class="lbl">Strategy</span>
+            <div class="algo-tabs" id="strategy-tabs">
+              <button class="atab on" data-strategy="first_fit" onclick="setStrategy('first_fit')">First-Fit</button>
+              <button class="atab" data-strategy="best_fit" onclick="setStrategy('best_fit')">Best-Fit</button>
+              <button class="atab" data-strategy="worst_fit" onclick="setStrategy('worst_fit')">Worst-Fit</button>
+              <button class="atab" data-strategy="next_fit" onclick="setStrategy('next_fit')">Next-Fit</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctrl-row" style="margin-top:14px">
+          <div class="field">
+            <span class="lbl">Total Memory</span>
+            <input type="number" id="inp-total-mem" value="16384" style="width:100px">
+          </div>
+          <div class="field">
+            <span class="lbl">Block Size</span>
+            <input type="number" id="inp-block-size" value="64" style="width:80px">
+          </div>
+          <div class="field">
+            <span class="lbl">Max Processes</span>
+            <input type="number" id="inp-max-procs" value="8" min="2" max="12" style="width:70px">
+          </div>
+        </div>
+
+        <div class="ctrl-row" style="margin-top:14px">
+          <div class="field">
+            <span class="lbl">Actions</span>
+            <div class="btn-row">
+              <button class="bp" id="btn-load" onclick="refreshLive()">&#9654; Load Live</button>
+              <button class="bs" onclick="compactMemory()">&#8635; Compact</button>
+              <button class="bd" onclick="resetAll()">&#10227; Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctrl-row" style="margin-top:14px">
+          <div class="field">
+            <span class="lbl">Free Segment</span>
+            <div class="btn-row">
+              <select id="sel-free" style="width:180px"></select>
+              <button class="bs" onclick="freeSegment()">Free</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Presets -->
-  <div class="pnl">
-    <div class="sec">Preset Scenarios</div>
-    <div class="preset-row">
-      <button class="bs" onclick="loadPreset('frag')">Fragmentation Demo</button>
-      <button class="bs" onclick="loadPreset('compact')">Compaction Demo</button>
-      <button class="bs" onclick="loadPreset('full')">Memory Full</button>
-      <button class="bs" onclick="loadPreset('bestworst')">Best vs Worst</button>
-    </div>
-  </div>
-
-  <!-- Memory Map -->
-  <div class="pnl">
-    <div class="sec">Memory Map</div>
-    <div class="memory-map" id="memory-map"></div>
-  </div>
-
-  <!-- Stats -->
-  <div class="pnl">
-    <div class="sec">Fragmentation Statistics</div>
-    <div class="stats-row" id="stats-grid">
-      <div class="sc"><div class="sc-lbl">Used</div><div class="sc-val" id="st-used">&mdash;</div></div>
-      <div class="sc"><div class="sc-lbl">Free</div><div class="sc-val" id="st-free">&mdash;</div></div>
-      <div class="sc"><div class="sc-lbl">Internal Frag</div><div class="sc-val" id="st-int">&mdash;</div></div>
-      <div class="sc"><div class="sc-lbl">External Frag</div><div class="sc-val" id="st-ext">&mdash;</div></div>
-      <div class="sc"><div class="sc-lbl">Utilization</div><div class="sc-val" id="st-util">&mdash;</div></div>
-    </div>
-  </div>
-
-  <!-- Tables -->
-  <div class="tbl-row">
+    <!-- Scenario Presets -->
     <div class="pnl">
-      <div class="sec">Segment Table</div>
-      <div id="seg-table-empty" class="empty">No segments allocated</div>
-      <table id="segment-table" style="display:none">
-        <thead>
-          <tr><th>Name</th><th class="num">Base</th><th class="num">Limit</th><th class="num">Allocated</th><th class="num">Int.Frag</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="sec">Simulation Scenarios</div>
+      <div class="preset-row">
+        <button class="bs" onclick="loadPreset('fragmentation')">&#9656; Fragmentation Demo</button>
+        <button class="bs" onclick="loadPreset('compaction')">&#9656; Compaction Demo</button>
+        <button class="bs" onclick="loadPreset('pressure')">&#9656; Memory Pressure</button>
+        <button class="bs" onclick="loadPreset('swiss')">&#9656; Swiss Cheese</button>
+      </div>
     </div>
 
+    <!-- Memory Performance -->
+    <div class="pnl" style="position:relative">
+      <div class="sec">
+        Memory Performance
+        <span class="sec-right" id="perf-timestamp">&mdash;</span>
+      </div>
+
+      <div style="font-size:12px;margin-bottom:6px;color:var(--t)">Memory Utilization History</div>
+      <div class="tm-chart-container">
+        <canvas id="tm-chart" class="tm-chart"></canvas>
+      </div>
+
+      <div class="stats-row" id="stats-grid" style="margin-bottom:20px">
+        <div class="sc">
+          <div class="sc-lbl">In Use</div>
+          <div class="sc-val" id="st-used">&mdash;</div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">Available</div>
+          <div class="sc-val" id="st-free">&mdash;</div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">Internal Frag</div>
+          <div class="sc-val" id="st-int">&mdash;</div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">External Frag</div>
+          <div class="sc-val" id="st-ext">&mdash;</div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">Holes</div>
+          <div class="sc-val" id="st-holes">&mdash;</div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">Utilization</div>
+          <div class="sc-val" id="st-util">&mdash;</div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <div style="font-size:12px;color:var(--t)">Memory Composition</div>
+      </div>
+      <div class="comp-bar" id="comp-bar"></div>
+      <div class="comp-legend" id="comp-legend"></div>
+
+      <div style="font-size:12px;color:var(--t);margin-top:20px;margin-bottom:8px">Block-Level Memory Map</div>
+      <div class="tm-grid" id="memory-grid"></div>
+    </div>
+
+    <!-- Tables -->
+    <div class="tbl-row">
+      <div class="pnl">
+        <div class="sec">Segment Table</div>
+        <div id="seg-table-empty" class="empty">No segments allocated</div>
+        <table id="segment-table" style="display:none">
+          <thead>
+            <tr>
+              <th>Process</th>
+              <th>Type</th>
+              <th class="num">Base</th>
+              <th class="num">Limit</th>
+              <th class="num">Allocated</th>
+              <th class="num">Int.Frag</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="pnl">
+        <div class="sec">Free Holes</div>
+        <div id="holes-table-empty" class="empty">No simulation data</div>
+        <table id="holes-table" style="display:none">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="num">Base</th>
+              <th class="num">Size</th>
+              <th class="num">% of Total</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- History -->
     <div class="pnl">
-      <div class="sec">Free Holes</div>
-      <div id="holes-table-empty" class="empty">No simulation data</div>
-      <table id="holes-table" style="display:none">
-        <thead>
-          <tr><th class="num">Base</th><th class="num">Size</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="sec">Operation History</div>
+      <div class="hist-scroll" id="history-log">
+        <div class="empty" id="hist-empty">Run operations to see history</div>
+      </div>
     </div>
+
   </div>
 
-  <!-- History -->
-  <div class="pnl">
-    <div class="sec">Operation History</div>
-    <div class="hist-scroll" id="history-log">
-      <div class="empty" id="hist-empty">Run operations to see history</div>
-    </div>
-  </div>
+  <script>
+    /* ==========================================
+     * STATE
+     * ========================================== */
+    var state = {
+      strategy: 'first_fit',
+      totalMem: 16384,
+      blockSize: 64,
+      maxProcs: 8,
+      processes: [],
+      systemInfo: {},
+      snapshots: [],
+      extraOps: [],
+      usageHistory: [],
+      loading: false,
+      pollTimer: null
+    };
 
-</div>
+    /* ==========================================
+     * PROCESS COLOR SYSTEM
+     * ========================================== */
+    var PROC_HUES = [210, 270, 150, 30, 340, 60, 300, 180, 90, 240, 120, 0];
+    var procColorMap = {};
+    var procColorIdx = 0;
 
-<script>
-var currentState = {
-  strategy: 'first_fit',
-  totalMem: 4096,
-  blockSize: 16,
-  operations: [],
-  snapshots: []
-};
-
-var PRESETS = {
-  'frag': {
-    name: 'Fragmentation Demo', totalMem: 1024, blockSize: 16,
-    operations: [
-      { action: 'alloc', name: 'A', size: 200 },
-      { action: 'alloc', name: 'B', size: 300 },
-      { action: 'alloc', name: 'C', size: 400 },
-      { action: 'free', name: 'B' },
-      { action: 'alloc', name: 'D', size: 100 }
-    ]
-  },
-  'compact': {
-    name: 'Compaction Demo', totalMem: 2000, blockSize: 16,
-    operations: [
-      { action: 'alloc', name: 'A', size: 500 },
-      { action: 'alloc', name: 'B', size: 500 },
-      { action: 'alloc', name: 'C', size: 500 },
-      { action: 'free', name: 'A' },
-      { action: 'free', name: 'C' },
-      { action: 'compact' }
-    ]
-  },
-  'full': {
-    name: 'Memory Full', totalMem: 4096, blockSize: 16,
-    operations: [
-      { action: 'alloc', name: 'A', size: 1000 },
-      { action: 'alloc', name: 'B', size: 1000 },
-      { action: 'alloc', name: 'C', size: 1000 },
-      { action: 'alloc', name: 'D', size: 1000 },
-      { action: 'alloc', name: 'E', size: 500 }
-    ]
-  },
-  'bestworst': {
-    name: 'Best vs Worst', totalMem: 2000, blockSize: 16,
-    operations: [
-      { action: 'alloc', name: 'A', size: 200 },
-      { action: 'alloc', name: 'B', size: 800 },
-      { action: 'alloc', name: 'C', size: 500 },
-      { action: 'free', name: 'A' },
-      { action: 'free', name: 'B' },
-      { action: 'alloc', name: 'D', size: 150 }
-    ]
-  }
-};
-
-function getColorForSegment(index) {
-  return 'hsl(' + (index * 47) + ', 55%, 35%)';
-}
-
-function setStrategy(strat) {
-  currentState.strategy = strat;
-  var tabs = document.querySelectorAll('.atab');
-  for (var i = 0; i < tabs.length; i++) {
-    if (tabs[i].getAttribute('data-strategy') === strat) {
-      tabs[i].classList.add('on');
-    } else {
-      tabs[i].classList.remove('on');
+    function getColorForProcess(procName, segType) {
+      if (!(procName in procColorMap)) {
+        procColorMap[procName] = PROC_HUES[procColorIdx % PROC_HUES.length];
+        procColorIdx++;
+      }
+      var hue = procColorMap[procName];
+      var sat = 22;
+      var light = 42;
+      if (segType === '.heap') { light = 50; sat = 26; }
+      else if (segType === '.data') { light = 36; sat = 18; }
+      else if (segType === '.stack') { light = 56; sat = 20; }
+      return 'hsl(' + hue + ',' + sat + '%,' + light + '%)';
     }
-  }
-}
 
-function fetchSegmentation() {
-  var isLocked = currentState.operations.length > 0;
-  document.getElementById('inp-total-mem').disabled = isLocked;
-  document.getElementById('inp-block-size').disabled = isLocked;
+    function parseSegName(name) {
+      var lastDot = name.lastIndexOf('.');
+      if (lastDot > 0) {
+        return { proc: name.substring(0, lastDot), type: name.substring(lastDot) };
+      }
+      return { proc: name, type: '' };
+    }
 
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/segmentation', true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      if (xhr.status === 200) {
-        var snapshots = JSON.parse(xhr.responseText);
-        currentState.snapshots = snapshots;
-        renderAll();
-      } else {
-        try {
-          var errData = JSON.parse(xhr.responseText);
-          alert('API Error: ' + (errData.error || 'Server error'));
-        } catch(e) {
-          alert('API Error: ' + xhr.status);
+    function getSegColor(segName) {
+      var parsed = parseSegName(segName);
+      return getColorForProcess(parsed.proc, parsed.type);
+    }
+
+    function getProcSwatchColor(procName) {
+      return getColorForProcess(procName, '.text');
+    }
+
+    /* ==========================================
+     * API
+     * ========================================== */
+    function loadLiveData(silent) {
+      if (state.loading) return;
+      state.loading = true;
+
+      var btn = document.getElementById('btn-load');
+      if (btn && !silent) {
+        btn.innerHTML = '&#8987; Loading...';
+        btn.disabled = true;
+      }
+
+      var q = 'strategy=' + encodeURIComponent(state.strategy) +
+        '&total_memory=' + state.totalMem +
+        '&block_size=' + state.blockSize +
+        '&max_processes=' + state.maxProcs;
+
+      if (state.extraOps.length > 0) {
+        q += '&extra_ops=' + encodeURIComponent(JSON.stringify(state.extraOps));
+      }
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/api/live-segmentation?' + q, true);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          state.loading = false;
+          if (btn) {
+            btn.innerHTML = '&#9654; Load Live';
+            btn.disabled = false;
+          }
+
+          if (xhr.status === 200) {
+            var data = JSON.parse(xhr.responseText);
+            state.processes = data.processes || [];
+            state.systemInfo = data.system || {};
+            state.snapshots = data.simulation ? data.simulation.snapshots : [];
+
+            // Build color map from process order
+            procColorMap = {};
+            procColorIdx = 0;
+            for (var i = 0; i < state.processes.length; i++) {
+              getColorForProcess(state.processes[i].name, '.text');
+            }
+
+            // Track utilization history
+            var lastSnap = state.snapshots.length > 0 ? state.snapshots[state.snapshots.length - 1] : null;
+            if (lastSnap && lastSnap.fragmentation) {
+              state.usageHistory.push(lastSnap.fragmentation.utilization);
+              if (state.usageHistory.length > 60) state.usageHistory.shift();
+            }
+
+            if (data.timestamp) applyTimestampUI(data.timestamp);
+            renderAll();
+          } else if (!silent) {
+            try {
+              var err = JSON.parse(xhr.responseText);
+              console.error('API Error:', err.error);
+            } catch (e) {
+              console.error('API Error:', xhr.status);
+            }
+          }
+        }
+      };
+      xhr.send();
+    }
+
+    /* ==========================================
+     * STRATEGY
+     * ========================================== */
+    function setStrategy(s) {
+      state.strategy = s;
+      var tabs = document.querySelectorAll('.atab');
+      for (var i = 0; i < tabs.length; i++) {
+        if (tabs[i].getAttribute('data-strategy') === s) {
+          tabs[i].classList.add('on');
+        } else {
+          tabs[i].classList.remove('on');
+        }
+      }
+      loadLiveData();
+    }
+
+    /* ==========================================
+     * ACTIONS
+     * ========================================== */
+    function freeSegment() {
+      var name = document.getElementById('sel-free').value;
+      if (!name) return;
+      state.extraOps.push({ action: 'free', name: name });
+      loadLiveData();
+    }
+
+    function compactMemory() {
+      state.extraOps.push({ action: 'compact' });
+      loadLiveData();
+    }
+
+    function refreshLive() {
+      state.extraOps = [];
+      procColorMap = {};
+      procColorIdx = 0;
+      loadLiveData();
+    }
+
+    function resetAll() {
+      state.extraOps = [];
+      state.usageHistory = [];
+      state.snapshots = [];
+      state.processes = [];
+      procColorMap = {};
+      procColorIdx = 0;
+      renderAll();
+      loadLiveData();
+    }
+
+    function loadPreset(type) {
+      state.extraOps = [];
+
+      if (type === 'fragmentation') {
+        // Free alternating process segments to create holes
+        if (state.processes.length >= 3) {
+          var segs1 = Object.keys(state.processes[1].segments || {});
+          for (var i = 0; i < segs1.length; i++) {
+            state.extraOps.push({ action: 'free', name: segs1[i] });
+          }
+          if (state.processes.length >= 5) {
+            var segs2 = Object.keys(state.processes[3].segments || {});
+            for (var j = 0; j < segs2.length; j++) {
+              state.extraOps.push({ action: 'free', name: segs2[j] });
+            }
+          }
+        }
+      } else if (type === 'compaction') {
+        // Create fragmentation then compact
+        if (state.processes.length >= 3) {
+          var segsC = Object.keys(state.processes[1].segments || {});
+          for (var ci = 0; ci < segsC.length; ci++) {
+            state.extraOps.push({ action: 'free', name: segsC[ci] });
+          }
+          if (state.processes.length >= 5) {
+            var segsC2 = Object.keys(state.processes[3].segments || {});
+            for (var cj = 0; cj < segsC2.length; cj++) {
+              state.extraOps.push({ action: 'free', name: segsC2[cj] });
+            }
+          }
+        }
+        state.extraOps.push({ action: 'compact' });
+      } else if (type === 'pressure') {
+        // Try to allocate more memory than available
+        state.extraOps.push({
+          action: 'alloc',
+          name: 'NEW_PROCESS.heap',
+          size: Math.floor(state.totalMem * 0.35)
+        });
+      } else if (type === 'swiss') {
+        // Free every other process to create many holes
+        for (var si = 0; si < state.processes.length; si++) {
+          if (si % 2 === 1) {
+            var segsSw = Object.keys(state.processes[si].segments || {});
+            for (var sk = 0; sk < segsSw.length; sk++) {
+              state.extraOps.push({ action: 'free', name: segsSw[sk] });
+            }
+          }
+        }
+      }
+
+      loadLiveData();
+    }
+
+    /* ==========================================
+     * CONFIG LISTENERS
+     * ========================================== */
+    document.getElementById('inp-total-mem').addEventListener('change', function () {
+      var v = parseInt(this.value);
+      if (v > 0) { state.totalMem = v; state.extraOps = []; loadLiveData(); }
+    });
+    document.getElementById('inp-block-size').addEventListener('change', function () {
+      var v = parseInt(this.value);
+      if (v > 0) { state.blockSize = v; state.extraOps = []; loadLiveData(); }
+    });
+    document.getElementById('inp-max-procs').addEventListener('change', function () {
+      var v = parseInt(this.value);
+      if (v >= 2 && v <= 12) { state.maxProcs = v; state.extraOps = []; loadLiveData(); }
+    });
+
+    /* ==========================================
+     * MASTER RENDER
+     * ========================================== */
+    function renderAll() {
+      var snap = state.snapshots.length > 0 ? state.snapshots[state.snapshots.length - 1] : null;
+      renderProcessList();
+      renderStats(snap);
+      renderCompositionBar(snap);
+      renderBlockGrid(snap);
+      renderUsageChart();
+      renderSegmentTable(snap);
+      renderHolesTable(snap);
+      renderHistory();
+      updateFreeDropdown(snap);
+    }
+
+    /* ==========================================
+     * RENDER: Process List
+     * ========================================== */
+    function renderProcessList() {
+      var container = document.getElementById('proc-list');
+      var badge = document.getElementById('proc-count-badge');
+
+      if (!state.processes || state.processes.length === 0) {
+        container.innerHTML = '<div class="empty">Loading real process data&hellip;</div>';
+        badge.textContent = '\u2014';
+        return;
+      }
+
+      badge.textContent = state.processes.length + ' of ' +
+        (state.systemInfo.total_process_count || '?') + ' processes';
+
+      var totalMem = 0;
+      for (var i = 0; i < state.processes.length; i++) {
+        totalMem += state.processes[i].real_mem_kb;
+      }
+
+      var html = '';
+      for (var i = 0; i < state.processes.length; i++) {
+        var p = state.processes[i];
+        var pct = totalMem > 0 ? (p.real_mem_kb / totalMem * 100).toFixed(1) : '0.0';
+        var memStr = p.real_mem_mb >= 1024
+          ? (p.real_mem_mb / 1024).toFixed(1) + ' GB'
+          : p.real_mem_mb.toFixed(0) + ' MB';
+        var swatch = getProcSwatchColor(p.name);
+
+        html += '<div class="proc-item">' +
+          '<div class="proc-swatch" style="background:' + swatch + '"></div>' +
+          '<div class="proc-name" title="PIDs: ' + (p.pids || []).join(', ') + '">' + p.name + '</div>' +
+          '<div class="proc-inst">' + p.instances + ' inst</div>' +
+          '<div class="proc-mem">' + memStr + '</div>' +
+          '<div class="proc-pct">' + pct + '%</div>' +
+          '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    /* ==========================================
+     * RENDER: Stats Cards
+     * ========================================== */
+    function renderStats(snap) {
+      if (!snap || !snap.fragmentation) {
+        document.getElementById('st-used').textContent = '\u2014';
+        document.getElementById('st-free').textContent = '\u2014';
+        document.getElementById('st-int').textContent = '\u2014';
+        document.getElementById('st-ext').textContent = '\u2014';
+        document.getElementById('st-holes').textContent = '\u2014';
+        document.getElementById('st-util').textContent = '\u2014';
+        return;
+      }
+
+      var f = snap.fragmentation;
+      document.getElementById('st-used').textContent = formatBytes(f.used);
+      document.getElementById('st-free').textContent = formatBytes(f.total - f.used);
+
+      var intEl = document.getElementById('st-int');
+      intEl.textContent = formatBytes(f.internal_frag);
+      intEl.className = 'sc-val' + (f.internal_frag > 0 ? ' sc-warn' : '');
+
+      var extEl = document.getElementById('st-ext');
+      extEl.textContent = formatBytes(f.external_frag);
+      extEl.className = 'sc-val' + (f.external_frag > 0 ? ' sc-err' : '');
+
+      // Count holes (type === 'hole' in memory map, excluding trailing free)
+      var holesCount = 0;
+      if (snap.memory_map) {
+        for (var i = 0; i < snap.memory_map.length; i++) {
+          if (snap.memory_map[i].type === 'hole') holesCount++;
+        }
+      }
+      var holesEl = document.getElementById('st-holes');
+      holesEl.textContent = holesCount;
+      holesEl.className = 'sc-val' + (holesCount > 0 ? ' sc-err' : '');
+
+      document.getElementById('st-util').textContent = f.utilization + '%';
+    }
+
+    function formatBytes(b) {
+      if (b >= 1024) return (b / 1024).toFixed(1) + ' KB';
+      return b + ' B';
+    }
+
+    /* ==========================================
+     * RENDER: Composition Bar
+     * ========================================== */
+    function renderCompositionBar(snap) {
+      var bar = document.getElementById('comp-bar');
+      var legend = document.getElementById('comp-legend');
+      bar.innerHTML = '';
+      legend.innerHTML = '';
+
+      if (!snap || !snap.memory_map) return;
+
+      var totalMem = state.totalMem;
+      var procsSeen = {};
+
+      for (var i = 0; i < snap.memory_map.length; i++) {
+        var block = snap.memory_map[i];
+        var pct = (block.size / totalMem * 100);
+        if (pct < 0.1) continue;
+
+        var div = document.createElement('div');
+        div.style.width = pct + '%';
+
+        if (block.type === 'segment') {
+          var parsed = parseSegName(block.name);
+          var segColor = getSegColor(block.name);
+
+          // Main segment portion
+          var usedSize = block.requested || block.size;
+          var fragSize = block.internal_frag || 0;
+          var usedPct = fragSize > 0 ? ((usedSize / block.size) * 100) : 100;
+
+          if (fragSize > 0 && usedPct < 97) {
+            // Show segment with internal frag indicator
+            div.className = 'comp-seg';
+            div.style.background = 'linear-gradient(to right, ' + segColor + ' ' + usedPct + '%, rgba(255,255,255,0.1) ' + usedPct + '%)';
+          } else {
+            div.className = 'comp-seg';
+            div.style.background = segColor;
+          }
+          div.title = block.name + '\nBase: ' + block.base + '\nRequested: ' + (block.requested || '?') + 'B\nAllocated: ' + block.size + 'B\nInt.Frag: ' + (block.internal_frag || 0) + 'B';
+
+          if (!procsSeen[parsed.proc]) procsSeen[parsed.proc] = true;
+
+        } else if (block.type === 'hole') {
+          div.className = 'comp-hole';
+          div.title = 'HOLE (External Fragmentation)\nBase: ' + block.base + '\nSize: ' + block.size + 'B';
+        } else {
+          div.className = 'comp-free';
+          div.title = 'Free Space\nBase: ' + block.base + '\nSize: ' + block.size + 'B';
+        }
+        bar.appendChild(div);
+      }
+
+      // Build legend
+      var legendHTML = '';
+      var procNames = Object.keys(procsSeen);
+      for (var k = 0; k < procNames.length; k++) {
+        legendHTML += '<span class="comp-legend-item">' +
+          '<span class="comp-legend-swatch" style="background:' + getProcSwatchColor(procNames[k]) + '"></span>' +
+          procNames[k] + '</span>';
+      }
+      legendHTML += '<span class="comp-legend-item"><span class="comp-legend-swatch" style="background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 2px,var(--b) 2px,var(--b) 4px)"></span>Hole</span>';
+      legendHTML += '<span class="comp-legend-item"><span class="comp-legend-swatch" style="background:var(--bg3)"></span>Free</span>';
+      legendHTML += '<span class="comp-legend-item"><span class="comp-legend-swatch" style="background:linear-gradient(to right,#555 60%,rgba(255,255,255,0.1) 60%)"></span>Int.Frag</span>';
+      legend.innerHTML = legendHTML;
+    }
+
+    /* ==========================================
+     * RENDER: Block Grid
+     * ========================================== */
+    function renderBlockGrid(snap) {
+      var container = document.getElementById('memory-grid');
+      container.innerHTML = '';
+      if (!snap || !snap.memory_map) return;
+
+      var totalBlocks = Math.ceil(state.totalMem / state.blockSize);
+      var cellSize = totalBlocks > 400 ? 6 : totalBlocks > 200 ? 8 : 10;
+      container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(' + cellSize + 'px, 1fr))';
+
+      for (var j = 0; j < snap.memory_map.length; j++) {
+        var item = snap.memory_map[j];
+        var blocks = Math.ceil(item.size / state.blockSize);
+
+        var intFragBlocks = 0;
+        if (item.type === 'segment' && snap.segments && snap.segments[item.name]) {
+          var fragBytes = snap.segments[item.name].internal_frag || 0;
+          intFragBlocks = Math.ceil(fragBytes / state.blockSize);
+        }
+        var usedBlocks = blocks - intFragBlocks;
+
+        for (var k = 0; k < blocks; k++) {
+          var cell = document.createElement('div');
+          cell.className = 'block-cell';
+
+          if (item.type === 'hole') {
+            cell.classList.add('block-hole');
+            cell.title = 'Hole (External Frag)\nBase: ' + (item.base + k * state.blockSize);
+          } else if (item.type === 'free') {
+            cell.classList.add('block-free');
+            cell.title = 'Free Block';
+          } else if (item.type === 'segment') {
+            if (k >= usedBlocks) {
+              cell.classList.add('block-frag');
+              cell.title = item.name + ' — Internal Fragmentation (Wasted)';
+            } else {
+              cell.style.background = getSegColor(item.name);
+              cell.title = item.name + ' — Block ' + (k + 1) + '/' + usedBlocks;
+            }
+          }
+          container.appendChild(cell);
         }
       }
     }
-  };
-  xhr.send(JSON.stringify({
-    operations: currentState.operations,
-    strategy: currentState.strategy,
-    total_memory: currentState.totalMem,
-    block_size: currentState.blockSize
-  }));
-}
 
-function renderAll() {
-  var snap = currentState.snapshots.length > 0
-    ? currentState.snapshots[currentState.snapshots.length - 1]
-    : null;
-  renderMemoryMap(snap);
-  renderSegmentTable(snap);
-  renderHolesTable(snap);
-  renderFragStats(snap);
-  renderHistory();
-  updateFreeDropdown(snap);
-}
+    /* ==========================================
+     * RENDER: Usage Chart
+     * ========================================== */
+    function renderUsageChart() {
+      var canvas = document.getElementById('tm-chart');
+      if (!canvas) return;
 
-function renderMemoryMap(snapshot) {
-  var container = document.getElementById('memory-map');
-  container.innerHTML = '';
-  if (!snapshot || !snapshot.memory_map) return;
+      var rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
 
-  var colorIndexes = {};
-  var cIdx = 0;
-  var segKeys = Object.keys(snapshot.segments || {});
-  for (var i = 0; i < segKeys.length; i++) {
-    colorIndexes[segKeys[i]] = ++cIdx;
-  }
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
 
-  for (var j = 0; j < snapshot.memory_map.length; j++) {
-    var block = snapshot.memory_map[j];
-    var pct = (block.size / currentState.totalMem) * 100;
-    var div = document.createElement('div');
-    div.style.width = pct + '%';
+      // Grid
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = 1;
+      for (var i = 1; i < 10; i++) {
+        var y = i * (H / 10);
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      for (var j = 1; j < 20; j++) {
+        var x = j * (W / 20);
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
 
-    if (block.type === 'segment') {
-      div.className = 'mem-seg';
-      div.style.background = getColorForSegment(colorIndexes[block.name] || 0);
-      div.title = 'Segment: ' + block.name + '\nBase: ' + block.base + '\nLimit: ' + block.requested + '\nAllocated: ' + block.size;
-      div.innerText = block.name + ' (' + block.size + 'B)';
-    } else if (block.type === 'hole') {
-      div.className = 'mem-seg mem-hole';
-      div.title = 'Hole Base: ' + block.base + '\nSize: ' + block.size;
-      div.innerText = block.size + 'B';
+      // Y-axis labels
+      ctx.fillStyle = '#333';
+      ctx.font = '9px "Geist Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('100%', 4, 12);
+      ctx.fillText('50%', 4, H / 2 + 4);
+      ctx.fillText('0%', 4, H - 4);
+
+      if (state.usageHistory.length === 0) return;
+
+      var pData = state.usageHistory.slice();
+      if (pData.length === 1) pData.unshift(pData[0]);
+
+      var maxPoints = 60;
+      var stepX = W / (maxPoints - 1);
+      var startX = W - ((pData.length - 1) * stepX);
+
+      // Fill area
+      ctx.beginPath();
+      ctx.moveTo(startX, H);
+      for (var m = 0; m < pData.length; m++) {
+        var px = startX + m * stepX;
+        var py = H - (pData[m] / 100 * H);
+        ctx.lineTo(px, py);
+      }
+      ctx.lineTo(startX + (pData.length - 1) * stepX, H);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.fill();
+
+      // Line
+      ctx.beginPath();
+      for (var m = 0; m < pData.length; m++) {
+        var px = startX + m * stepX;
+        var py = H - (pData[m] / 100 * H);
+        if (m === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = '#f0f0f0';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Current value indicator
+      if (pData.length > 0) {
+        var lastVal = pData[pData.length - 1];
+        var lastPx = startX + (pData.length - 1) * stepX;
+        var lastPy = H - (lastVal / 100 * H);
+        ctx.beginPath();
+        ctx.arc(lastPx, lastPy, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fill();
+      }
     }
-    container.appendChild(div);
-  }
-}
 
-function renderSegmentTable(snapshot) {
-  var table = document.getElementById('segment-table');
-  var empty = document.getElementById('seg-table-empty');
-  var tbody = table.querySelector('tbody');
-  tbody.innerHTML = '';
+    window.addEventListener('resize', renderUsageChart);
 
-  if (!snapshot || !snapshot.segments || Object.keys(snapshot.segments).length === 0) {
-    table.style.display = 'none';
-    empty.style.display = '';
-    return;
-  }
-  table.style.display = '';
-  empty.style.display = 'none';
+    /* ==========================================
+     * RENDER: Segment Table
+     * ========================================== */
+    function renderSegmentTable(snap) {
+      var table = document.getElementById('segment-table');
+      var empty = document.getElementById('seg-table-empty');
+      var tbody = table.querySelector('tbody');
+      tbody.innerHTML = '';
 
-  var segVals = Object.values(snapshot.segments);
-  for (var i = 0; i < segVals.length; i++) {
-    var seg = segVals[i];
-    var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + seg.name + '</td>' +
-      '<td class="num">' + seg.base + '</td>' +
-      '<td class="num">' + seg.limit + '</td>' +
-      '<td class="num">' + seg.allocated_size + '</td>' +
-      '<td class="num">' + seg.internal_frag + '</td>';
-    tbody.appendChild(tr);
-  }
-}
+      if (!snap || !snap.segments || Object.keys(snap.segments).length === 0) {
+        table.style.display = 'none';
+        empty.style.display = '';
+        return;
+      }
+      table.style.display = '';
+      empty.style.display = 'none';
 
-function renderHolesTable(snapshot) {
-  var table = document.getElementById('holes-table');
-  var empty = document.getElementById('holes-table-empty');
-  var tbody = table.querySelector('tbody');
-  tbody.innerHTML = '';
+      var segVals = Object.values(snap.segments);
+      // Sort by base address
+      segVals.sort(function (a, b) { return a.base - b.base; });
 
-  if (!snapshot || !snapshot.free_holes || snapshot.free_holes.length === 0) {
-    table.style.display = 'none';
-    empty.style.display = '';
-    return;
-  }
-  table.style.display = '';
-  empty.style.display = 'none';
+      for (var i = 0; i < segVals.length; i++) {
+        var seg = segVals[i];
+        var parsed = parseSegName(seg.name);
+        var color = getSegColor(seg.name);
 
-  for (var i = 0; i < snapshot.free_holes.length; i++) {
-    var hole = snapshot.free_holes[i];
-    var tr = document.createElement('tr');
-    tr.innerHTML = '<td class="num">' + hole.base + '</td>' +
-      '<td class="num">' + hole.size + '</td>';
-    tbody.appendChild(tr);
-  }
-}
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + color + ';margin-right:6px;vertical-align:middle"></span>' + parsed.proc + '</td>' +
+          '<td style="color:var(--t2)">' + (parsed.type || '\u2014') + '</td>' +
+          '<td class="num">' + seg.base + '</td>' +
+          '<td class="num">' + seg.limit + '</td>' +
+          '<td class="num">' + seg.allocated_size + '</td>' +
+          '<td class="num"' + (seg.internal_frag > 0 ? ' style="color:#e0a040"' : '') + '>' + seg.internal_frag + '</td>';
+        tbody.appendChild(tr);
+      }
+    }
 
-function renderFragStats(snapshot) {
-  if (!snapshot || !snapshot.fragmentation) {
-    document.getElementById('st-used').textContent = '\u2014';
-    document.getElementById('st-free').textContent = '\u2014';
-    document.getElementById('st-int').textContent = '\u2014';
-    document.getElementById('st-ext').textContent = '\u2014';
-    document.getElementById('st-util').textContent = '\u2014';
-    return;
-  }
+    /* ==========================================
+     * RENDER: Holes Table
+     * ========================================== */
+    function renderHolesTable(snap) {
+      var table = document.getElementById('holes-table');
+      var empty = document.getElementById('holes-table-empty');
+      var tbody = table.querySelector('tbody');
+      tbody.innerHTML = '';
 
-  var f = snapshot.fragmentation;
-  document.getElementById('st-used').textContent = f.used + 'B';
-  document.getElementById('st-free').textContent = (f.total - f.used) + 'B';
+      // Filter only real holes (not trailing free space)
+      var holes = [];
+      if (snap && snap.memory_map) {
+        for (var i = 0; i < snap.memory_map.length; i++) {
+          if (snap.memory_map[i].type === 'hole') {
+            holes.push(snap.memory_map[i]);
+          }
+        }
+      }
 
-  var intEl = document.getElementById('st-int');
-  intEl.textContent = f.internal_frag + 'B';
-  intEl.className = 'sc-val' + (f.internal_frag > 0 ? ' sv-warn' : '');
+      if (holes.length === 0) {
+        table.style.display = 'none';
+        empty.style.display = '';
+        empty.textContent = snap ? 'No holes — memory is contiguous' : 'No simulation data';
+        return;
+      }
+      table.style.display = '';
+      empty.style.display = 'none';
 
-  var extEl = document.getElementById('st-ext');
-  extEl.textContent = f.external_frag + 'B';
-  extEl.className = 'sc-val' + (f.external_frag > 0 ? ' sv-err' : '');
+      for (var i = 0; i < holes.length; i++) {
+        var hole = holes[i];
+        var pctOfTotal = (hole.size / state.totalMem * 100).toFixed(1);
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + (i + 1) + '</td>' +
+          '<td class="num">' + hole.base + '</td>' +
+          '<td class="num">' + hole.size + ' B</td>' +
+          '<td class="num" style="color:var(--t3)">' + pctOfTotal + '%</td>';
+        tbody.appendChild(tr);
+      }
+    }
 
-  document.getElementById('st-util').textContent = f.utilization + '%';
-}
+    /* ==========================================
+     * RENDER: History
+     * ========================================== */
+    function renderHistory() {
+      var container = document.getElementById('history-log');
+      container.innerHTML = '';
 
-function renderHistory() {
-  var container = document.getElementById('history-log');
-  var histEmpty = document.getElementById('hist-empty');
-  container.innerHTML = '';
+      if (state.snapshots.length === 0) {
+        var emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty';
+        emptyDiv.id = 'hist-empty';
+        emptyDiv.textContent = 'Run operations to see history';
+        container.appendChild(emptyDiv);
+        return;
+      }
 
-  if (currentState.snapshots.length === 0) {
-    container.appendChild(histEmpty);
-    return;
-  }
+      for (var i = 0; i < state.snapshots.length; i++) {
+        var snap = state.snapshots[i];
+        var op = snap.operation;
+        var desc = '';
 
-  for (var i = 0; i < currentState.snapshots.length; i++) {
-    var snap = currentState.snapshots[i];
-    var op = snap.operation;
-    var desc = '';
-    if (op.action === 'alloc') desc = 'alloc ' + op.name + '(' + op.size + 'B)';
-    else if (op.action === 'free') desc = 'free ' + op.name;
-    else if (op.action === 'compact') desc = 'compact';
+        if (op.action === 'alloc') {
+          var parsed = parseSegName(op.name);
+          desc = 'alloc ' + parsed.proc + '<span style="color:var(--t3)">' + parsed.type + '</span> (' + op.size + 'B)';
+        } else if (op.action === 'free') {
+          desc = 'free ' + op.name;
+        } else if (op.action === 'compact') {
+          desc = 'compact memory';
+        }
 
-    var isErr = !!snap.error;
-    var entry = document.createElement('div');
-    entry.className = 'hist-entry' + (isErr ? ' is-err' : '');
-    entry.innerHTML = '<div class="step-num">#' + (i + 1) + '</div>' +
-      '<div class="step-op">' + desc + '</div>' +
-      '<div class="step-res">' + (isErr ? snap.error : 'OK') + '</div>';
-    container.appendChild(entry);
-  }
-  container.scrollTop = container.scrollHeight;
-}
+        var isErr = !!snap.error;
+        var entry = document.createElement('div');
+        entry.className = 'hist-entry' + (isErr ? ' is-err' : '');
+        entry.innerHTML =
+          '<div class="step-num">#' + (i + 1) + '</div>' +
+          '<div class="step-op">' + desc + '</div>' +
+          '<div class="step-res">' + (isErr ? snap.error : '\u2713 OK') + '</div>';
+        container.appendChild(entry);
+      }
+      container.scrollTop = container.scrollHeight;
+    }
 
-function updateFreeDropdown(snapshot) {
-  var sel = document.getElementById('sel-free-name');
-  sel.innerHTML = '';
-  if (!snapshot || !snapshot.segments) return;
+    /* ==========================================
+     * RENDER: Free Dropdown
+     * ========================================== */
+    function updateFreeDropdown(snap) {
+      var sel = document.getElementById('sel-free');
+      sel.innerHTML = '';
+      if (!snap || !snap.segments) return;
 
-  var keys = Object.keys(snapshot.segments);
-  for (var i = 0; i < keys.length; i++) {
-    var opt = document.createElement('option');
-    opt.value = keys[i];
-    opt.innerText = keys[i];
-    sel.appendChild(opt);
-  }
-}
+      var keys = Object.keys(snap.segments);
+      keys.sort();
+      for (var i = 0; i < keys.length; i++) {
+        var opt = document.createElement('option');
+        opt.value = keys[i];
+        opt.innerText = keys[i];
+        sel.appendChild(opt);
+      }
+    }
 
-function updateConfigFromInputs() {
-  if (currentState.operations.length === 0) {
-    var mem = parseInt(document.getElementById('inp-total-mem').value);
-    var bs = parseInt(document.getElementById('inp-block-size').value);
-    if (mem > 0) currentState.totalMem = mem;
-    if (bs > 0) currentState.blockSize = bs;
-  }
-}
+    /* ==========================================
+     * TIMESTAMP UI
+     * ========================================== */
+    function applyTimestampUI(payload) {
+      if (!payload) return;
 
-function allocSegment() {
-  updateConfigFromInputs();
-  var name = document.getElementById('inp-seg-name').value.trim();
-  var size = parseInt(document.getElementById('inp-seg-size').value);
+      var perfTs = document.getElementById('perf-timestamp');
+      if (perfTs) {
+        perfTs.textContent = payload.display || '';
+      }
 
-  if (!name || isNaN(size) || size <= 0) {
-    alert('Please provide valid name and size.');
-    return;
-  }
+      var nav = document.querySelector('nav');
+      var badge = document.getElementById('realtimeDateBadge');
+      if (!badge && nav) {
+        badge = document.createElement('span');
+        badge.id = 'realtimeDateBadge';
+        badge.style.marginLeft = 'auto';
+        badge.style.fontSize = '10px';
+        badge.style.letterSpacing = '.06em';
+        badge.style.textTransform = 'uppercase';
+        badge.style.padding = '4px 10px';
+        badge.style.border = '1px solid var(--b2)';
+        badge.style.borderRadius = '3px';
+        badge.style.color = 'var(--t2)';
+        nav.appendChild(badge);
+      }
+      if (badge) {
+        badge.textContent = '\u25CF Live ' + (payload.display || '');
+      }
+    }
 
-  var snap = currentState.snapshots.length ? currentState.snapshots[currentState.snapshots.length - 1] : null;
-  if (snap && snap.segments && snap.segments[name]) {
-    alert('Segment "' + name + '" already exists.');
-    return;
-  }
+    /* ==========================================
+     * POLLING & INIT
+     * ========================================== */
+    function startPolling() {
+      if (state.pollTimer) clearInterval(state.pollTimer);
+      state.pollTimer = setInterval(function () {
+        loadLiveData(true);
+      }, 15000);
+    }
 
-  currentState.operations.push({ action: 'alloc', name: name, size: size });
-  document.getElementById('inp-seg-name').value = '';
-  fetchSegmentation();
-}
-
-function freeSegment() {
-  var name = document.getElementById('sel-free-name').value;
-  if (!name) return;
-  currentState.operations.push({ action: 'free', name: name });
-  fetchSegmentation();
-}
-
-function compactMemory() {
-  currentState.operations.push({ action: 'compact' });
-  fetchSegmentation();
-}
-
-function loadPreset(presetKey) {
-  var p = PRESETS[presetKey];
-  if (!p) return;
-  resetAll(false);
-  currentState.totalMem = p.totalMem;
-  currentState.blockSize = p.blockSize;
-  document.getElementById('inp-total-mem').value = p.totalMem;
-  document.getElementById('inp-block-size').value = p.blockSize;
-  currentState.operations = p.operations.slice();
-  fetchSegmentation();
-}
-
-function resetAll(render) {
-  if (render === undefined) render = true;
-  currentState.operations = [];
-  currentState.snapshots = [];
-  document.getElementById('inp-total-mem').disabled = false;
-  document.getElementById('inp-block-size').disabled = false;
-  if (render) {
-    renderAll();
-  }
-}
-</script>
+    // Initial load
+    loadLiveData();
+    startPolling();
+  </script>
 </body>
+
 </html>

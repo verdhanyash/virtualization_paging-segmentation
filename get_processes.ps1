@@ -1,0 +1,1 @@
+Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 30 Id, ProcessName, @{N='WS_MB';E={[math]::Round($_.WorkingSet64/1MB,2)}}, @{N='VM_MB';E={[math]::Round($_.VirtualMemorySize64/1MB,2)}}, @{N='PM_MB';E={[math]::Round($_.PagedMemorySize64/1MB,2)}}, @{N='Thr';E={$_.Threads.Count}}, @{N='Hnd';E={$_.HandleCount}} | ConvertTo-Json

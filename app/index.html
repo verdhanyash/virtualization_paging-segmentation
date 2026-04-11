@@ -31,6 +31,12 @@ nav .sep{color:var(--t4);margin:0 2px}
 .hero-title{font-size:22px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px}
 .hero-sub{font-size:12px;color:var(--t2);letter-spacing:.06em;max-width:560px;margin:0 auto;line-height:1.8}
 .hero-line{width:48px;height:2px;background:var(--white);margin:20px auto 0;border-radius:1px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:livePulse 2s ease-in-out infinite;display:inline-block}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 6px #4ade80}50%{opacity:.3;box-shadow:none}}
+.proc-src{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.proc-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:2px;font-size:10px;color:var(--t2);letter-spacing:.04em}
+.proc-chip .pc-mem{color:var(--t3);font-size:9px}
+.live-hero-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:3px;font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-top:14px}
 
 /* Panel */
 .pnl{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:16px}
@@ -142,6 +148,8 @@ button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;lette
       Explore page replacement algorithms and memory segmentation through interactive step-by-step visualization, real-time statistics, and side-by-side comparisons.
     </div>
     <div class="hero-line"></div>
+    <div class="live-hero-badge"><span class="live-dot"></span> Powered by Live Windows Processes</div>
+    <div class="proc-src" id="procSrcChips" style="margin-top:14px"></div>
   </div>
 
   <!-- Algorithm Cards -->
@@ -310,6 +318,8 @@ button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;lette
 <script>
 var allResults = null;
 var cComp = null, cBelady = null, cRace = null;
+var compareTimer = null;
+var realtimeCompareInt = null;
 
 function $(id) { return document.getElementById(id); }
 
@@ -318,8 +328,17 @@ function parseRef() {
 }
 function getFC() { return parseInt($('fcSlider').value); }
 
+function scheduleCompare() {
+  if (compareTimer) clearTimeout(compareTimer);
+  compareTimer = setTimeout(function() {
+    runCompare();
+  }, 350);
+}
+
 $('fcSlider').addEventListener('input', function() { $('fcDisp').textContent = this.value; });
 $('refIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') runCompare(); });
+$('fcSlider').addEventListener('change', scheduleCompare);
+$('refIn').addEventListener('input', scheduleCompare);
 
 var CHART_FONT = "'Geist Mono','Courier New',monospace";
 var CHART_AXIS = {
@@ -329,35 +348,66 @@ var CHART_AXIS = {
 };
 
 function runCompare() {
-  var ref = parseRef();
-  var fc = getFC();
-  if (ref.length === 0) { alert('Enter a valid reference string'); return; }
+  requestRealtimeCompare({ showLoading: true, silent: false });
+}
 
+function requestRealtimeCompare(opts) {
+  opts = opts || {};
+
+  var fc = getFC();
   var btn = document.querySelector('.bp');
-  btn.innerHTML = '&#8987; Loading...';
-  btn.disabled = true;
+  if (opts.showLoading && btn) {
+    btn.innerHTML = '&#8987; Loading...';
+    btn.disabled = true;
+  }
+
+  var query =
+    '&frames=' + encodeURIComponent(fc) +
+    '&algorithm=FIFO' +
+    '&max_belady_frames=10' +
+    '&live=1' +
+    '&live_source=windows' +
+    '&window_size=12' +
+    '&max_page=9';
 
   var xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/simulate', true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.open('GET', '/api/realtime-algorithms?' + query.replace(/^&/, ''), true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
-      btn.innerHTML = '&#9654; Compare All';
-      btn.disabled = false;
+      if (opts.showLoading && btn) {
+        btn.innerHTML = '&#9654; Compare All';
+        btn.disabled = false;
+      }
+
       if (xhr.status === 200) {
-        allResults = JSON.parse(xhr.responseText);
-        renderComparison();
-      } else {
+        var payload = JSON.parse(xhr.responseText);
+        if (payload.timestamp) applyRealtimeDateUI(payload.timestamp);
+        if (payload.paging) {
+          if (payload.paging.meta && payload.paging.meta.reference_string) {
+            $('refIn').value = payload.paging.meta.reference_string.join(',');
+            if (payload.paging.meta.processes && payload.paging.meta.processes.length) {
+              $('refIn').title = payload.paging.meta.processes
+                .map(function(p) { return p.name + ' (' + p.pid + ')'; })
+                .join(' | ');
+              renderProcessSource(payload.paging.meta.processes);
+            }
+          }
+          allResults = payload.paging;
+          renderComparison();
+        }
+      } else if (!opts.silent) {
         alert('Error: ' + xhr.responseText);
       }
     }
   };
-  xhr.send(JSON.stringify({
-    reference_string: ref,
-    frames: fc,
-    algorithm: 'FIFO',
-    max_belady_frames: 10
-  }));
+  xhr.send();
+}
+
+function startRealtimeComparePolling() {
+  if (realtimeCompareInt) clearInterval(realtimeCompareInt);
+  realtimeCompareInt = setInterval(function() {
+    requestRealtimeCompare({ silent: true });
+  }, 10000);
 }
 
 function renderComparison() {
@@ -658,6 +708,64 @@ function resetSegCompare() {
   $('segCards').innerHTML = '';
   if (cSegExt) { cSegExt.destroy(); cSegExt = null; }
   if (cSegUtil) { cSegUtil.destroy(); cSegUtil = null; }
+}
+
+function applyRealtimeDateUI(payload) {
+  var nav = document.querySelector('nav');
+  if (!nav || !payload) return;
+
+  var badge = document.getElementById('realtimeDateBadge');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.id = 'realtimeDateBadge';
+    badge.style.marginLeft = 'auto';
+    badge.style.fontSize = '10px';
+    badge.style.letterSpacing = '.06em';
+    badge.style.textTransform = 'uppercase';
+    badge.style.padding = '4px 10px';
+    badge.style.border = '1px solid var(--b2)';
+    badge.style.borderRadius = '3px';
+    badge.style.color = 'var(--t2)';
+    nav.appendChild(badge);
+  }
+
+  badge.textContent = 'Live ' + payload.display;
+
+  if (payload.theme === 'day') {
+    document.documentElement.style.setProperty('--b3', '#5a5a5a');
+    document.documentElement.style.setProperty('--bg2', '#141414');
+  } else {
+    document.documentElement.style.setProperty('--b3', '#444');
+    document.documentElement.style.setProperty('--bg2', '#111');
+  }
+}
+
+function refreshRealtimeDate() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/realtime-date', true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4 && xhr.status === 200) {
+      applyRealtimeDateUI(JSON.parse(xhr.responseText));
+    }
+  };
+  xhr.send();
+}
+
+refreshRealtimeDate();
+setInterval(refreshRealtimeDate, 30000);
+requestRealtimeCompare({ silent: true });
+startRealtimeComparePolling();
+
+function renderProcessSource(procs) {
+  var c = $('procSrcChips');
+  if (!c || !procs || procs.length === 0) return;
+  var html = '';
+  for (var i = 0; i < procs.length; i++) {
+    var p = procs[i];
+    var memMB = Math.round(p.mem_kb / 1024);
+    html += '<span class="proc-chip">' + p.name + ' <span class="pc-mem">PID:' + p.pid + ' &middot; ' + memMB + 'MB</span></span>';
+  }
+  c.innerHTML = html;
 }
 </script>
 </body>

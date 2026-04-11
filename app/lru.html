@@ -31,6 +31,12 @@ nav .sep{color:var(--t4);margin:0 2px}
 .hdr h1{font-size:14px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
 .hdr-sub{font-size:10px;color:var(--t3);letter-spacing:.06em}
 .algo-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:3px;font-size:10px;color:var(--white);text-transform:uppercase;letter-spacing:.1em}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:livePulse 2s ease-in-out infinite;display:inline-block}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 6px #4ade80}50%{opacity:.3;box-shadow:none}}
+.proc-src{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.proc-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:2px;font-size:10px;color:var(--t2);letter-spacing:.04em}
+.proc-chip .pc-mem{color:var(--t3);font-size:9px}
+.psrc-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
 
 /* Panel */
 .pnl{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:16px}
@@ -158,12 +164,14 @@ button:disabled{opacity:.28;cursor:not-allowed}
 
   <div class="hdr">
     <h1>LRU &mdash; Least Recently Used</h1>
-    <span class="algo-badge">&#9679; Recency-Based Replacement</span>
+    <span class="algo-badge"><span class="live-dot"></span> Live Windows Processes</span>
   </div>
 
   <!-- Algorithm Description -->
   <div class="algo-desc">
     <strong>How LRU works:</strong> When a page fault occurs and all frames are full, the page that has not been used for the <strong>longest time</strong> is evicted. LRU uses an <code>OrderedDict</code> to track recency &mdash; on each access, the page is moved to the end. The first item is always the <strong>least recently used</strong>. Unlike FIFO, LRU does <em>not</em> suffer from B&eacute;lady&rsquo;s Anomaly.
+    <br><br>
+    <strong>Live Process Connection:</strong> The reference string reflects <strong>real Windows processes</strong>. Virtual pages and time-slices are distributed using the OS's <strong>most volatile metric: CPU execution time</strong>, meaning highly active processes will dominate the page references. LRU excels here because these highly active workloads generate real <strong>temporal locality</strong>: recently accessed pages are likely to be accessed again quickly, which LRU exploits by keeping them in memory.
   </div>
 
   <!-- Controls -->
@@ -197,6 +205,13 @@ button:disabled{opacity:.28;cursor:not-allowed}
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Live Process Source -->
+  <div class="pnl" id="procSrcPanel" style="display:none">
+    <div class="sec">Live Process Source</div>
+    <div class="psrc-label">Reference string generated from these real Windows processes:</div>
+    <div class="proc-src" id="procSrcChips"></div>
   </div>
 
   <!-- Step Visualization -->
@@ -265,6 +280,8 @@ var ALGO = 'LRU';
 var result = null, curStep = -1, autoInt = null;
 var allResults = null;
 var cBelady = null, cTimeline = null;
+var runTimer = null;
+var realtimeRunInt = null;
 
 function $(id) { return document.getElementById(id); }
 function show(id) { $(id).style.display = ''; }
@@ -274,6 +291,10 @@ function parseRef() {
   return $('refIn').value.trim().split(/[\s,]+/).map(Number).filter(function(n) { return !isNaN(n) && n > 0; });
 }
 function getFC() { return parseInt($('fcSlider').value); }
+function scheduleRun() {
+  if (runTimer) clearTimeout(runTimer);
+  runTimer = setTimeout(function() { runSim(); }, 350);
+}
 function getSpd() {
   var s = parseInt($('spdSlider').value);
   return Math.round(2200 - (s - 1) * (2100 / 9));
@@ -498,43 +519,87 @@ function renderCharts() {
 
 function runSim() {
   stopAuto();
-  var ref = parseRef();
-  var fc = getFC();
-  if (ref.length === 0) { alert('Enter a valid reference string'); return; }
+  requestRealtimeRun({ showLoading: true, silent: false, force: true, resetStep: true });
+}
 
+function applyRealtimeRunPayload(payload, resetStep) {
+  if (!payload || !payload.paging || !payload.paging.current) return;
+
+  allResults = payload.paging;
+  result = payload.paging.current;
+  if (!result.steps || result.steps.length === 0) return;
+
+  if (resetStep || curStep < 0) curStep = 0;
+  else curStep = Math.min(curStep, result.steps.length - 1);
+
+  hide('stepEmpty'); show('stepContent');
+  hide('histEmpty'); show('histContent');
+  renderHistory();
+  renderStep(curStep);
+  renderCharts();
+  updateBtns();
+}
+
+function requestRealtimeRun(opts) {
+  opts = opts || {};
+  if (autoInt && !opts.force) return;
+
+  var fc = getFC();
   var runBtn = document.querySelector('.bp');
-  runBtn.innerHTML = '&#8987; Loading...';
-  runBtn.disabled = true;
+  if (opts.showLoading && runBtn) {
+    runBtn.innerHTML = '&#8987; Loading...';
+    runBtn.disabled = true;
+  }
+
+  var isManual = $('refIn').getAttribute('data-manual') === '1';
+  var query =
+    'frames=' + encodeURIComponent(fc) +
+    '&algorithm=' + encodeURIComponent(ALGO) +
+    '&max_belady_frames=10';
+
+  if (!isManual) {
+    query += '&live=1&live_source=windows&window_size=12&max_page=9';
+  } else {
+    query += '&reference_string=' + encodeURIComponent($('refIn').value);
+  }
 
   var xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/simulate', true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.open('GET', '/api/realtime-algorithms?' + query, true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
-      runBtn.innerHTML = '&#9654; Run';
-      runBtn.disabled = false;
+      if (opts.showLoading && runBtn) {
+        runBtn.innerHTML = '&#9654; Run';
+        runBtn.disabled = false;
+      }
+
       if (xhr.status === 200) {
-        var data = JSON.parse(xhr.responseText);
-        allResults = data;
-        result = data.current;
-        curStep = 0;
-        hide('stepEmpty'); show('stepContent');
-        hide('histEmpty'); show('histContent');
-        renderHistory();
-        renderStep(0);
-        renderCharts();
-        updateBtns();
-      } else {
+        var payload = JSON.parse(xhr.responseText);
+        if (payload.timestamp) applyRealtimeDateUI(payload.timestamp);
+        if (payload.paging && payload.paging.meta && payload.paging.meta.reference_string) {
+          $('refIn').value = payload.paging.meta.reference_string.join(',');
+          if (payload.paging.meta.processes && payload.paging.meta.processes.length) {
+            $('refIn').title = payload.paging.meta.processes
+              .map(function(p) { return p.name + ' (' + p.pid + ')'; })
+              .join(' | ');
+            renderProcessSource(payload.paging.meta.processes);
+          }
+        }
+        applyRealtimeRunPayload(payload, !!opts.resetStep);
+      } else if (!opts.silent) {
         alert('Error: ' + xhr.responseText);
       }
     }
   };
-  xhr.send(JSON.stringify({
-    reference_string: ref,
-    frames: fc,
-    algorithm: ALGO,
-    max_belady_frames: 10
-  }));
+  xhr.send();
+}
+
+function startRealtimeRunPolling() {
+  if (realtimeRunInt) clearInterval(realtimeRunInt);
+  realtimeRunInt = setInterval(function() {
+    if (!autoInt) {
+      requestRealtimeRun({ silent: true, resetStep: false });
+    }
+  }, 10000);
 }
 
 function stepFwd() {
@@ -570,12 +635,115 @@ function resetSim() {
   if (cBelady) { cBelady.destroy(); cBelady = null; }
   if (cTimeline) { cTimeline.destroy(); cTimeline = null; }
   updateBtns();
+  hide('procSrcPanel');
 }
 
 $('fcSlider').addEventListener('input', function() { $('fcDisp').textContent = this.value; });
 $('refIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') runSim(); });
+$('fcSlider').addEventListener('change', scheduleRun);
+
+$('refIn').addEventListener('input', function() {
+  $('refIn').setAttribute('data-manual', '1');
+  if (realtimeRunInt) { clearInterval(realtimeRunInt); realtimeRunInt = null; }
+  var dot = document.querySelector('.live-dot');
+  if (dot) dot.style.display = 'none';
+  scheduleRun();
+});
+
+function applyRealtimeDateUI(payload) {
+  var nav = document.querySelector('nav');
+  if (!nav || !payload) return;
+
+  var badge = document.getElementById('realtimeDateBadge');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.id = 'realtimeDateBadge';
+    badge.style.marginLeft = 'auto';
+    badge.style.fontSize = '10px';
+    badge.style.letterSpacing = '.06em';
+    badge.style.textTransform = 'uppercase';
+    badge.style.padding = '4px 10px';
+    badge.style.border = '1px solid var(--b2)';
+    badge.style.borderRadius = '3px';
+    badge.style.color = 'var(--t2)';
+    nav.appendChild(badge);
+  }
+
+  badge.textContent = 'Live ' + payload.display;
+
+  if (payload.theme === 'day') {
+    document.documentElement.style.setProperty('--b3', '#5a5a5a');
+    document.documentElement.style.setProperty('--bg2', '#141414');
+  } else {
+    document.documentElement.style.setProperty('--b3', '#444');
+    document.documentElement.style.setProperty('--bg2', '#111');
+  }
+}
+
+function refreshRealtimeDate() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/realtime-date', true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4 && xhr.status === 200) {
+      applyRealtimeDateUI(JSON.parse(xhr.responseText));
+    }
+  };
+  xhr.send();
+}
+
+refreshRealtimeDate();
+setInterval(refreshRealtimeDate, 30000);
+requestRealtimeRun({ silent: true, force: true, resetStep: true });
+startRealtimeRunPolling();
 Chart.defaults.color = '#555';
 updateBtns();
+
+function renderProcessSource(procs) {
+  if (!procs || procs.length === 0) { hide('procSrcPanel'); return; }
+  show('procSrcPanel');
+  var html = '';
+  for (var i = 0; i < procs.length; i++) {
+    var p = procs[i];
+    var memMB = p.mem_kb >= 1024*1024 ? (p.mem_kb/1024/1024).toFixed(1)+'GB' : Math.round(p.mem_kb/1024)+'MB';
+    var volStr = p.volatility_label ? p.volatility_label : memMB;
+    var pagesStr = p.pages ? p.pages.join(',') : (''+p.page);
+    var pctStr = p.mem_pct ? ' ('+p.mem_pct+'% Activity)' : '';
+    html += '<span class="proc-chip" style="cursor:pointer;" onclick="useProcessPages(\'' + pagesStr + '\', \'' + p.name + '\')" title="Click to isolate this process">' + p.name + ' <span class="pc-mem">' + volStr + pctStr + ' &rarr; Pages [' + pagesStr + ']</span></span>';
+  }
+  $('procSrcChips').innerHTML = html;
+}
+
+window.useProcessPages = function(pagesStr, processName) {
+  var pages = pagesStr.split(',').map(Number);
+  if (!pages || pages.length === 0) return;
+  var ref = [];
+  var lastPage = pages[0];
+  for(var i=0; i<12; i++) {
+     if (Math.random() < 0.3 && pages.length > 1) {
+         var nextIdx = pages.indexOf(lastPage) + 1;
+         if (nextIdx >= pages.length) nextIdx = 0;
+         lastPage = pages[nextIdx];
+     } else if (Math.random() < 0.6) {
+     } else {
+         lastPage = pages[Math.floor(Math.random() * pages.length)];
+     }
+     ref.push(lastPage);
+  }
+  
+  $('refIn').value = ref.join(',');
+  $('refIn').setAttribute('data-manual', '1');
+  
+  if (realtimeRunInt) { clearInterval(realtimeRunInt); realtimeRunInt = null; }
+  var badge = document.querySelector('.live-dot');
+  if (badge) badge.style.display = 'none';
+  
+  var psrcLabel = document.querySelector('.psrc-label');
+  if (psrcLabel) {
+      psrcLabel.innerHTML = 'Reference string isolated manually for process: <strong>' + processName + '</strong> <a href="#" onclick="location.reload()" style="color:#4ade80;margin-left:8px;text-decoration:none;">&#8635; Resume Live Feed</a>';
+  }
+  
+  runSim();
+};
 </script>
 </body>
 </html>
