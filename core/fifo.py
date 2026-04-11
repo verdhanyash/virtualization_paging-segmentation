@@ -1,16 +1,18 @@
 # core/fifo.py - FIFO Page Replacement Algorithm (T2)
+# Uses core/engine.py PageTable + FramePool for memory management
 # Includes Belady's Anomaly detection
 
 from collections import deque
 from typing import Optional, Dict, List, Tuple
+from core.engine import PageTable, FramePool, detect_page_fault
 
 
 def run_fifo(reference_string: List[int], frames: int) -> Dict:
     # FIFO: evict the oldest page (first in, first out)
     
-    frame_list: List[Optional[int]] = [None] * frames
-    queue: deque[int] = deque()  # tracks insertion order
-    page_to_frame: Dict[int, int] = {}
+    page_table = PageTable()
+    frame_pool = FramePool(frames)
+    queue: deque[int] = deque()  # tracks insertion order (FIFO policy)
     
     steps: List[Dict] = []
     fault_positions: List[int] = []
@@ -19,31 +21,37 @@ def run_fifo(reference_string: List[int], frames: int) -> Dict:
         evicted: Optional[int] = None
         fault = False
         
-        if page not in page_to_frame:
+        if detect_page_fault(page, page_table):
             # page fault
             fault = True
             fault_positions.append(idx)
             
-            # find free frame
-            free_frame = _find_free_frame(frame_list)
+            # try to allocate a free frame
+            free_frame = frame_pool.allocate()
             
             if free_frame is not None:
                 # use free frame
-                frame_list[free_frame] = page
-                page_to_frame[page] = free_frame
+                page_table.map_page(page, free_frame)
                 queue.append(page)
             else:
-                # evict oldest page
+                # evict oldest page (FIFO policy)
                 evicted = queue.popleft()
-                evicted_frame = page_to_frame.pop(evicted)
-                frame_list[evicted_frame] = page
-                page_to_frame[page] = evicted_frame
+                freed_frame = page_table.unmap_page(evicted)
+                frame_pool.free(freed_frame)
+                
+                new_frame = frame_pool.allocate()
+                page_table.map_page(page, new_frame)
                 queue.append(page)
+        
+        # Build frame state from page table mappings
+        frame_state: List[Optional[int]] = [None] * frames
+        for vpage, phys_frame in page_table.get_all_mappings().items():
+            frame_state[phys_frame] = vpage
         
         # record step
         steps.append({
             "page": page,
-            "frames": frame_list.copy(),
+            "frames": frame_state,
             "fault": fault,
             "evicted": evicted
         })
@@ -57,14 +65,6 @@ def run_fifo(reference_string: List[int], frames: int) -> Dict:
         "total_hits": len(reference_string) - len(fault_positions),
         "fault_positions": fault_positions
     }
-
-
-def _find_free_frame(frame_list: List[Optional[int]]) -> Optional[int]:
-    # returns index of first free frame, or None if full
-    for i, f in enumerate(frame_list):
-        if f is None:
-            return i
-    return None
 
 
 def detect_beladys_anomaly(reference_string: List[int], max_frames: int) -> Dict:

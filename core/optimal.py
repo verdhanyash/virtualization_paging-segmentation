@@ -1,5 +1,6 @@
 """
-Optimal Page Replacement Algorithm
+Optimal Page Replacement Algorithm (T4)
+Uses core/engine.py PageTable + FramePool for memory management
 
 Description:
 Implements Optimal (MIN) page replacement algorithm, which replaces the page
@@ -20,6 +21,7 @@ total_faults = 7
 """
 
 from typing import Dict, List, Optional
+from core.engine import PageTable, FramePool, detect_page_fault
 
 
 def _find_optimal_victim(loaded_pages: list[int], future_refs: list[int]) -> int:
@@ -65,8 +67,8 @@ def run_optimal(reference_string: list[int], frames: int) -> dict:
     Returns:
         Dictionary containing simulation results including steps, fault count, etc.
     """
-    # Initialize frames as empty (None represents free frame)
-    frame_list: List[Optional[int]] = [None] * frames
+    page_table = PageTable()
+    frame_pool = FramePool(frames)
 
     steps: List[Dict] = []
     fault_positions: List[int] = []
@@ -75,7 +77,7 @@ def run_optimal(reference_string: list[int], frames: int) -> dict:
         evicted: Optional[int] = None
         fault = False
 
-        if page in frame_list:
+        if not detect_page_fault(page, page_table):
             # Page hit - no action needed
             pass
         else:
@@ -83,28 +85,37 @@ def run_optimal(reference_string: list[int], frames: int) -> dict:
             fault = True
             fault_positions.append(idx)
 
-            # Check if there's a free frame
-            if None in frame_list:
-                # Use free frame
-                free_index = frame_list.index(None)
-                frame_list[free_index] = page
+            # Try to allocate a free frame
+            allocated_frame = frame_pool.allocate()
+
+            if allocated_frame is not None:
+                # Free frame available
+                page_table.map_page(page, allocated_frame)
             else:
-                # No free frame - need to evict a page
-                # We know all frames are loaded, so type hint handles no-None case
-                loaded_pages = [p for p in frame_list if p is not None]
+                # No free frame - need to evict using Optimal policy
+                loaded_pages = list(page_table.get_all_mappings().keys())
                 future_refs = reference_string[idx + 1:]
-                
+
                 # Find the optimal victim
                 evicted = _find_optimal_victim(loaded_pages, future_refs)
-                
-                # Replace the evicted page
-                evicted_index = frame_list.index(evicted)
-                frame_list[evicted_index] = page
+
+                # Free the victim's frame
+                freed_frame = page_table.unmap_page(evicted)
+                frame_pool.free(freed_frame)
+
+                # Allocate new frame for incoming page
+                new_frame = frame_pool.allocate()
+                page_table.map_page(page, new_frame)
+
+        # Build frame state from page table mappings
+        frame_state: List[Optional[int]] = [None] * frames
+        for vpage, phys_frame in page_table.get_all_mappings().items():
+            frame_state[phys_frame] = vpage
 
         # Record step
         steps.append({
             "page": page,
-            "frames": frame_list.copy(),
+            "frames": frame_state,
             "fault": fault,
             "evicted": evicted
         })

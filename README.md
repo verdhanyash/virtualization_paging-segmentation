@@ -2,7 +2,7 @@
 
 Welcome to the **Virtual Memory Optimization Challenge**! This repository is a modular, educational project simulating and analyzing virtual memory management algorithms, specifically focusing on page replacement strategies and memory segmentation.
 
-This project is built using Python for the core backend logic and Dash/Plotly for an interactive, data-rich user interface.
+This project is built using Flask for the core backend logic and vanilla HTML/JS with Chart.js for an interactive, data-rich user interface.
 
 ---
 
@@ -16,8 +16,7 @@ The application is broken down into distinct, modular tasks so that multiple dev
 1. **FIFO (First-In, First-Out)**: Evicts the oldest page in memory. Also includes logic to detect **Belady's Anomaly**.
 2. **LRU (Least Recently Used)**: Evicts the page that has not been accessed for the longest time.
 3. **Optimal (MIN)**: Evicts the page that will not be used for the longest time in the future (theoretical minimum faults).
-
-*(Upcoming: Segmentation and memory fragmentation simulations).*
+4. **Segmentation**: Allows users to experiment with custom inputs for memory allocation, simulate memory fragmentation with strategies like First-Fit, Best-Fit, etc.
 
 ---
 
@@ -33,30 +32,27 @@ virtual-memory-optimizer/
 │   ├── fifo.py                   # FIFO algorithm & Belady's anomaly detection
 │   ├── lru.py                    # LRU algorithm
 │   ├── optimal.py                # Optimal (MIN) algorithm
-│   └── segmentation.py           # (TODO) Segmentation & fragmentation
+│   └── segmentation.py           # Segmentation & fragmentation
 │
-├── visualization/                # CHARTS & GRAPHS (Plotly)
-│   ├── charts.py                 # Individual algorithm charts
-│   ├── comparison.py             # Side-by-side algo comparison
-│   └── belady_chart.py           # Belady's anomaly visualization
+├── app/                          # FRONTEND TEMPLATES & ASSETS
+│   ├── index.html                # Paging UI
+│   ├── segmentation.html         # Segmentation UI
+│   ├── lru.html                  # LRU algorithm UI
+│   ├── fifo.html                 # FIFO algorithm UI
+│   └── optimal.html              # Optimal algorithm UI
 │
-├── app/                          # UI COMPONENTS (Dash)
-│   ├── layout.py                 # Page layout structure
-│   ├── callbacks.py              # Dash callbacks and interactivity
-│   ├── animation.py              # Step-by-step UI animation
-│   └── main.py                   # Application entry point
-│
-├── assets/
-│   └── theme.css                 # Custom Jet black/white styling
+├── app.py                        # Flask entry point and API Routes
 │
 ├── tests/                        # Pytest Unit Tests
 │   ├── test_engine.py
 │   ├── test_fifo.py
 │   ├── test_lru.py
-│   └── test_optimal.py
+│   ├── test_optimal.py
+│   └── test_segmentation.py
 │
 ├── insane.txt                    # Project specification and task breakdown reference
-└── requirements.txt
+├── requirements.txt              # Dependencies used in the project
+└── Procfile                      # Render deployment configuration
 ```
 
 ---
@@ -106,7 +102,14 @@ Make sure you have Python 3.10+ installed.
    ```bash
    pip install -r requirements.txt
    ```
-   *(Requires `dash`, `plotly`, and `pytest`)*
+   *(Requires `flask`, `gunicorn`, and `pytest`)*
+
+### Running the Application Locally
+To start the Flask server locally, run:
+```bash
+python app.py
+```
+Access the application in your browser at `http://127.0.0.1:5000/`.
 
 ### Running the Tests
 We use `pytest` to ensure all core algorithms run accurately and perfectly match their theoretical fault counts.
@@ -127,17 +130,21 @@ This project is built around a specific roadmap detailed in `insane.txt`. Below 
 - [x] **T2:** FIFO Algorithm + Belady's Anomaly (`core/fifo.py`)
 - [x] **T3:** LRU Algorithm (`core/lru.py`)
 - [x] **T4:** Optimal Algorithm (`core/optimal.py`)
-- [ ] **T5:** Segmentation & Fragmentation (`core/segmentation.py`)
+- [x] **T5:** Segmentation Engine (`core/segmentation.py`)
 
 ### Visualization & UI
-- [ ] **T6:** Algorithm Charts (`visualization/charts.py`)
-- [ ] **T7:** Algorithm Comparison (`visualization/comparison.py`)
-- [ ] **T8:** Belady's Anomaly Chart (`visualization/belady_chart.py`)
-- [ ] **T9:** Page Layout (`app/layout.py`)
-- [ ] **T10:** Callbacks (`app/callbacks.py`)
-- [ ] **T11:** Animation (`app/animation.py`)
-- [ ] **T12:** App Entry Point (`app/main.py`)
-- [ ] **T13:** Theme CSS (`assets/theme.css`)
+- [x] **T6:** Algorithm Charts
+- [x] **T7:** Algorithm Comparison
+- [x] **T8:** Belady's Anomaly Chart
+- [x] **T9:** Paging Layout (`app/index.html`)
+- [x] **T10:** Paging Callbacks (`app/index.html JS`)
+- [x] **T11:** Paging Animation (`app/index.html CSS+JS`)
+- [x] **T12:** App Entry Point (`app.py`)
+- [x] **T13:** Theme CSS (`app/index.html`)
+- [x] **T15:** Segmentation Layout (`app/segmentation.html`)
+- [x] **T16:** Segmentation JS Logic (`app/segmentation.html`)
+- [x] **T17:** Segmentation Animations (`app/segmentation.html`)
+- [x] **T18:** Segmentation API Routes (`app.py`)
 
 ### Testing
 - [x] **T14:** Unit Tests (`tests/`)
@@ -147,9 +154,10 @@ This project is built around a specific roadmap detailed in `insane.txt`. Below 
 ## 🛠️ Tech Stack
 
 - **Language:** Python 3.10+
-- **UI Framework:** Dash (by Plotly)
-- **Data Visualization:** Plotly
+- **Web Framework:** Flask
+- **Client Charts:** Chart.js 4.4.1
 - **Testing:** pytest
+- **Deployment:** Gunicorn + Render
 - **Styling:** Jet black (`#0a0a0a`) & White (`#f0f0f0`) Custom CSS
 
 ---

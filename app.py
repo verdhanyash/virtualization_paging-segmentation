@@ -1,5 +1,5 @@
-import os
 from core.segmentation import simulate_fragmentation
+from core.engine import translate_address
 from flask import Flask, request, jsonify, render_template
 from core.fifo import run_fifo, detect_beladys_anomaly
 from core.lru import run_lru
@@ -67,6 +67,39 @@ def simulate():
         return jsonify({'error': f'Invalid input format: {str(e)}'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+# =========================
+# ADDRESS TRANSLATION ROUTE
+# =========================
+
+@flask_app.route('/api/translate', methods=['POST'])
+def translate_api():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Missing request body'}), 400
+
+        virtual_address = data.get('virtual_address')
+        page_size = data.get('page_size')
+
+        if virtual_address is None or page_size is None:
+            return jsonify({'error': 'virtual_address and page_size are required'}), 400
+
+        virtual_address = int(virtual_address)
+        page_size = int(page_size)
+
+        page_number, offset = translate_address(virtual_address, page_size)
+
+        return jsonify({
+            'virtual_address': virtual_address,
+            'page_size': page_size,
+            'page_number': page_number,
+            'offset': offset
+        })
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
     # =========================
 # T18: SEGMENTATION ROUTES
 # =========================

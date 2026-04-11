@@ -16,27 +16,18 @@
   --white:#f0f0f0;
 }
 body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh}
-
-/* Nav */
 nav{padding:16px 40px;border-bottom:1px solid var(--b);display:flex;gap:6px;align-items:center}
 nav a{color:var(--t2);text-decoration:none;font-size:11px;padding:6px 14px;border-radius:3px;letter-spacing:.05em;text-transform:uppercase;transition:all .15s}
 nav a:hover{color:var(--t)}
 nav a.active{color:var(--t);background:var(--bg3);border:1px solid var(--b)}
 nav .sep{color:var(--t4);margin:0 2px}
-
 .app{max-width:1120px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:14px}
-
-/* Header */
 .hdr{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--b)}
 .hdr h1{font-size:14px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
 .hdr-sub{font-size:10px;color:var(--t3);letter-spacing:.06em}
 .algo-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:3px;font-size:10px;color:var(--white);text-transform:uppercase;letter-spacing:.1em}
-
-/* Panel */
 .pnl{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:16px}
 .sec{font-size:9px;color:var(--t2);letter-spacing:.12em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--b);margin-bottom:14px}
-
-/* Controls */
 .ctrl-row{display:flex;gap:16px;align-items:end;flex-wrap:wrap}
 .field{display:flex;flex-direction:column;gap:5px}
 .field.grow{flex:1;min-width:200px}
@@ -57,11 +48,7 @@ button:disabled{opacity:.28;cursor:not-allowed}
 .btn-row{display:flex;gap:6px;flex-wrap:wrap}
 .spd-row{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--t2)}
 .spd-row input{accent-color:var(--white);width:80px}
-
-/* Empty */
 .empty{text-align:center;padding:28px 0;color:var(--t3);font-size:11px}
-
-/* Step info */
 .step-info{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .sstat{display:flex;flex-direction:column;gap:1px}
 .sstat-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em}
@@ -69,8 +56,6 @@ button:disabled{opacity:.28;cursor:not-allowed}
 .fpill{display:inline-flex;align-items:center;padding:4px 11px;border-radius:2px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border:1px solid}
 .fpill.is-fault{border-color:var(--white);color:var(--white);background:rgba(255,255,255,.05)}
 .fpill.is-hit{border-color:var(--t4);color:var(--t2)}
-
-/* Frame boxes */
 .frames-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
 .fbox{width:58px;height:58px;border:1px solid var(--b2);border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;background:var(--bg);transition:background .25s,border-color .25s}
 .fbox.loaded{background:var(--white);color:#0a0a0a;border-color:var(--white)}
@@ -81,12 +66,8 @@ button:disabled{opacity:.28;cursor:not-allowed}
 .fbox.loaded .fidx{color:#888}
 .fpage{font-size:21px;font-weight:600}
 .fbox.empty .fpage{color:var(--t4)}
-
-/* Progress */
 .prog{height:2px;background:var(--b);margin:10px 0 14px;border-radius:1px;overflow:hidden}
 .prog-fill{height:100%;background:var(--white);border-radius:1px;transition:width .3s ease}
-
-/* Ref pills */
 .ref-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
 .ref-pills{display:flex;gap:3px;flex-wrap:wrap}
 .rpill{width:25px;height:25px;display:flex;align-items:center;justify-content:center;font-size:10px;border:1px solid transparent;border-radius:2px;cursor:pointer;transition:all .12s;color:var(--t3);background:var(--bg3);user-select:none}
@@ -95,8 +76,6 @@ button:disabled{opacity:.28;cursor:not-allowed}
 .rpill.fpast{color:#aaa;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.15)}
 .rpill.hpast{color:var(--t3)}
 .rpill.fut{opacity:.3}
-
-/* History */
 .hist-wrap{overflow-x:auto}
 .hist-wrap table{border-collapse:separate;border-spacing:2px;white-space:nowrap}
 .hist-wrap th{width:26px;height:20px;font-size:9px;font-weight:400;color:var(--t3);text-align:center;padding:0}
@@ -112,8 +91,6 @@ button:disabled{opacity:.28;cursor:not-allowed}
 .cfy{background:transparent;color:var(--white);font-weight:600}
 .cfn{background:transparent;color:var(--t3)}
 .ccol{outline:1px solid rgba(255,255,255,.28);outline-offset:-1px}
-
-/* Stats */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .sc{background:var(--bg3);border-radius:3px;padding:12px 14px;text-align:center}
 .sc-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
@@ -122,20 +99,18 @@ button:disabled{opacity:.28;cursor:not-allowed}
 .sv-f{color:var(--white)}
 .sv-h{color:#555}
 .sv-r{color:#888}
-
-/* Charts */
 .chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .chart-title{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em}
 .chart-wrap{position:relative;height:200px}
 .anomaly-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.2);border-radius:2px;font-size:9px;color:var(--white);text-transform:uppercase;letter-spacing:.08em}
 .anim-dot{width:5px;height:5px;background:var(--white);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-
-/* Description */
 .algo-desc{background:var(--bg3);border-radius:3px;padding:16px 20px;font-size:12px;line-height:1.7;color:var(--t2);border-left:3px solid var(--b2)}
 .algo-desc strong{color:var(--t)}
 .algo-desc code{background:var(--bg);padding:2px 6px;border-radius:2px;font-size:11px;color:var(--t)}
-
+/* Real process loader */
+.real-loader{display:flex;gap:8px;align-items:center;padding:10px 0 14px;border-bottom:1px solid var(--b);margin-bottom:14px;flex-wrap:wrap}
+.real-loader select{flex:1;min-width:200px;background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:7px 10px;font-family:inherit;font-size:12px;border-radius:2px;outline:none}
 @media(max-width:720px){
   .ctrl-row{flex-direction:column}
   .stats-row{grid-template-columns:repeat(2,1fr)}
@@ -161,13 +136,23 @@ button:disabled{opacity:.28;cursor:not-allowed}
     <span class="algo-badge">&#9679; Queue-Based Replacement</span>
   </div>
 
-  <!-- Algorithm Description -->
   <div class="algo-desc">
     <strong>How FIFO works:</strong> Pages are loaded into frames in order. When a page fault occurs and all frames are full, the <strong>oldest page</strong> (the one that entered memory first) is evicted &mdash; like a queue. FIFO is simple but can suffer from <strong>B&eacute;lady&rsquo;s Anomaly</strong>, where <em>increasing</em> the number of frames actually <em>increases</em> faults.
   </div>
 
   <!-- Controls -->
   <div class="pnl">
+
+    <!-- Real Process Loader -->
+    <div class="real-loader">
+      <span class="lbl" style="white-space:nowrap">&#9679; Live Process</span>
+      <select id="procSelect">
+        <option value="">-- click Load to fetch running processes --</option>
+      </select>
+      <button class="bd" onclick="loadProcs(event)">Load</button>
+      <button class="bd" onclick="applyRealPaging(event)">Apply to Sim</button>
+    </div>
+
     <div class="ctrl-row">
       <div class="field grow">
         <span class="lbl">Reference String &mdash; comma or space separated</span>
@@ -239,7 +224,7 @@ button:disabled{opacity:.28;cursor:not-allowed}
     </div>
   </div>
 
-  <!-- Belady's Anomaly Chart (FIFO-specific) -->
+  <!-- Belady's Anomaly Chart -->
   <div class="pnl">
     <div class="chart-hdr">
       <span class="chart-title">B&eacute;lady's Anomaly (FIFO, frames 1&ndash;10)</span>
@@ -278,6 +263,46 @@ function getSpd() {
   var s = parseInt($('spdSlider').value);
   return Math.round(2200 - (s - 1) * (2100 / 9));
 }
+
+// ── Real Process Loader ──────────────────────────────────────────
+async function loadProcs(e) {
+  var btn = e.target;
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  try {
+    var res = await fetch('/api/real/processes');
+    var procs = await res.json();
+    var sel = $('procSelect');
+    sel.innerHTML = procs
+      .filter(function(p) { return p.memory_mb > 0; })
+      .map(function(p) {
+        return '<option value="' + p.pid + '">' + p.name + ' (PID ' + p.pid + ', ' + p.memory_mb + ' MB)</option>';
+      }).join('');
+  } catch(err) {
+    alert('Failed to load processes: ' + err.message);
+  }
+  btn.textContent = 'Load';
+  btn.disabled = false;
+}
+
+async function applyRealPaging(e) {
+  var pid = $('procSelect').value;
+  if (!pid) { alert('Click Load first, then select a process'); return; }
+  var btn = e.target;
+  btn.textContent = 'Applying...';
+  btn.disabled = true;
+  try {
+    var res = await fetch('/api/real/paging/' + pid);
+    var data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    $('refIn').value = data.reference_string.join(',');
+  } catch(err) {
+    alert('Failed to fetch paging data: ' + err.message);
+  }
+  btn.textContent = 'Apply to Sim';
+  btn.disabled = false;
+}
+// ────────────────────────────────────────────────────────────────
 
 function updateBtns() {
   var ok = result !== null;
@@ -416,11 +441,9 @@ var CHART_AXIS = {
 
 function renderCharts() {
   if (!allResults) return;
-
   if (cBelady) { cBelady.destroy(); cBelady = null; }
   if (cTimeline) { cTimeline.destroy(); cTimeline = null; }
 
-  // Belady's anomaly chart
   var bel = allResults.belady;
   var anomalyFs = {};
   for (var a = 0; a < bel.anomaly_at.length; a++) { anomalyFs[bel.anomaly_at[a][1]] = true; }
@@ -428,9 +451,7 @@ function renderCharts() {
   hide('beladyEmpty'); show('beladyWrap');
 
   var fLabels = Object.keys(bel.fault_counts).map(Number);
-  var fData = [];
-  var ptColors = [];
-  var ptSizes = [];
+  var fData = [], ptColors = [], ptSizes = [];
   for (var i = 0; i < fLabels.length; i++) {
     fData.push(bel.fault_counts[fLabels[i]]);
     ptColors.push(anomalyFs[fLabels[i]] ? '#ff5555' : '#f0f0f0');
@@ -439,18 +460,12 @@ function renderCharts() {
 
   cBelady = new Chart($('beladyChart'), {
     type:'line',
-    data:{
-      labels:fLabels,
-      datasets:[{
-        label:'Faults', data:fData,
-        borderColor:'#f0f0f0',
-        backgroundColor:'rgba(240,240,240,.04)',
-        pointBackgroundColor:ptColors,
-        pointBorderColor:ptColors,
-        pointRadius:ptSizes,
-        tension:.2, borderWidth:1.5, fill:true
-      }]
-    },
+    data:{ labels:fLabels, datasets:[{
+      label:'Faults', data:fData,
+      borderColor:'#f0f0f0', backgroundColor:'rgba(240,240,240,.04)',
+      pointBackgroundColor:ptColors, pointBorderColor:ptColors, pointRadius:ptSizes,
+      tension:.2, borderWidth:1.5, fill:true
+    }]},
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false} },
@@ -461,10 +476,8 @@ function renderCharts() {
     }
   });
 
-  // Fault timeline chart
   hide('timelineEmpty'); show('timelineWrap');
-  var cumData = [];
-  var c = 0;
+  var cumData = [], c = 0;
   for (var i = 0; i < result.steps.length; i++) {
     if (result.steps[i].fault) c++;
     cumData.push(c);
@@ -474,17 +487,12 @@ function renderCharts() {
 
   cTimeline = new Chart($('timelineChart'), {
     type:'line',
-    data:{
-      labels:stepLbls,
-      datasets:[{
-        label:'Cumulative Faults', data:cumData,
-        borderColor:'#f0f0f0',
-        backgroundColor:'rgba(240,240,240,.06)',
-        pointRadius:3,
-        pointBackgroundColor:'#f0f0f0',
-        tension:0, borderWidth:1.5, fill:true
-      }]
-    },
+    data:{ labels:stepLbls, datasets:[{
+      label:'Cumulative Faults', data:cumData,
+      borderColor:'#f0f0f0', backgroundColor:'rgba(240,240,240,.06)',
+      pointRadius:3, pointBackgroundColor:'#f0f0f0',
+      tension:0, borderWidth:1.5, fill:true
+    }]},
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false} },

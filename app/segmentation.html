@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Segmentation &mdash; Virtual Memory Simulator</title>
+<link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -14,41 +15,41 @@
   --t:#f0f0f0;--t2:#777;--t3:#444;--t4:#2a2a2a;
   --white:#f0f0f0;
 }
-body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh}
+body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:14px;line-height:1.6;min-height:100vh}
 
 /* Nav */
-nav{padding:16px 40px;border-bottom:1px solid var(--b);display:flex;gap:6px;align-items:center}
-nav a{color:var(--t2);text-decoration:none;font-size:11px;padding:6px 14px;border-radius:3px;letter-spacing:.05em;text-transform:uppercase;transition:all .15s}
+nav{padding:18px 40px;border-bottom:1px solid var(--b);display:flex;gap:8px;align-items:center}
+nav a{color:var(--t2);text-decoration:none;font-family:'Inter',sans-serif;font-size:13px;padding:8px 16px;border-radius:4px;letter-spacing:.04em;text-transform:uppercase;font-weight:500;transition:all .15s}
 nav a:hover{color:var(--t)}
 nav a.active{color:var(--t);background:var(--bg3);border:1px solid var(--b)}
-nav .sep{color:var(--t4);margin:0 2px}
+nav .sep{color:var(--t4);margin:0 4px}
 
-.app{max-width:1120px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:14px}
+.app{max-width:1120px;margin:0 auto;padding:28px;display:flex;flex-direction:column;gap:18px}
 
 /* Header */
 .hdr{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--b)}
-.hdr h1{font-size:14px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
-.algo-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:3px;font-size:10px;color:var(--white);text-transform:uppercase;letter-spacing:.1em}
+.hdr h1{font-family:'Inter',sans-serif;font-size:18px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.algo-badge{font-family:'Inter',sans-serif;display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:4px;font-size:12px;color:var(--white);text-transform:uppercase;letter-spacing:.08em;font-weight:500}
 
 /* Panel */
-.pnl{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:16px}
-.sec{font-size:9px;color:var(--t2);letter-spacing:.12em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--b);margin-bottom:14px}
+.pnl{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:22px}
+.sec{font-family:'Inter',sans-serif;font-size:12px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;padding-bottom:14px;border-bottom:1px solid var(--b);margin-bottom:18px}
 
 /* Description */
-.algo-desc{background:var(--bg3);border-radius:3px;padding:16px 20px;font-size:12px;line-height:1.7;color:var(--t2);border-left:3px solid var(--b2)}
+.algo-desc{background:var(--bg3);border-radius:4px;padding:20px 24px;font-size:14px;line-height:1.7;color:var(--t2);border-left:3px solid var(--b2)}
 .algo-desc strong{color:var(--t)}
 .algo-desc code{background:var(--bg);padding:2px 6px;border-radius:2px;font-size:11px;color:var(--t)}
 
 /* Controls */
 .ctrl-row{display:flex;gap:16px;align-items:end;flex-wrap:wrap}
-.field{display:flex;flex-direction:column;gap:5px}
+.field{display:flex;flex-direction:column;gap:6px}
 .field.grow{flex:1;min-width:160px}
-.lbl{font-size:9px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase}
+.lbl{font-family:'Inter',sans-serif;font-size:11px;color:var(--t2);letter-spacing:.08em;text-transform:uppercase;font-weight:500}
 input[type=text],input[type=number]{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:8px 10px;font-family:inherit;font-size:13px;border-radius:2px;outline:none;width:100%}
 input[type=text]:focus,input[type=number]:focus{border-color:var(--b3)}
 select{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:8px 10px;font-family:inherit;font-size:13px;border-radius:2px;outline:none}
 
-button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;border:none}
+button{padding:9px 18px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border-radius:3px;transition:all .15s;border:none}
 .bp{background:var(--white);color:#0a0a0a}
 .bp:hover{opacity:.85}
 .bs{background:transparent;color:var(--t);border:1px solid var(--b2)}
@@ -74,8 +75,8 @@ button:disabled{opacity:.28;cursor:not-allowed}
 
 /* Stats */
 .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.sc{background:var(--bg3);border-radius:3px;padding:12px 14px;text-align:center}
-.sc-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+.sc{background:var(--bg3);border-radius:4px;padding:16px 18px;text-align:center}
+.sc-lbl{font-family:'Inter',sans-serif;font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:500}
 .sc-val{font-size:22px;font-weight:600}
 .sv-warn{color:#ff9800}
 .sv-err{color:#f44336}
@@ -96,7 +97,7 @@ td.num,th.num{text-align:right}
 .hist-scroll{max-height:200px;overflow-y:auto}
 
 /* Empty */
-.empty{text-align:center;padding:28px 0;color:var(--t3);font-size:11px}
+.empty{text-align:center;padding:32px 0;color:var(--t3);font-size:13px}
 
 /* Presets */
 .preset-row{display:flex;gap:6px;flex-wrap:wrap}
@@ -106,6 +107,8 @@ td.num,th.num{text-align:right}
   .stats-row{grid-template-columns:repeat(2,1fr)}
   .tbl-row{grid-template-columns:1fr}
 }
+.err-bar{display:none;margin:0 auto;max-width:1120px;padding:12px 22px;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);border-radius:4px;font-size:13px;color:#ff6b6b;letter-spacing:.03em;margin-top:8px;animation:errIn .2s ease}
+@keyframes errIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
@@ -119,6 +122,7 @@ td.num,th.num{text-align:right}
   <span class="sep">|</span>
   <a href="/segmentation" class="active">Segmentation</a>
 </nav>
+<div class="err-bar" id="errBar"></div>
 
 <div class="app">
 
@@ -242,6 +246,16 @@ td.num,th.num{text-align:right}
 </div>
 
 <script>
+var errTimer = null;
+function showErr(msg) {
+  var bar = document.getElementById('errBar');
+  bar.textContent = '\u26A0 ' + msg;
+  bar.style.display = 'block';
+  if (errTimer) clearTimeout(errTimer);
+  errTimer = setTimeout(function() { bar.style.display = 'none'; }, 6000);
+}
+function clearErr() { document.getElementById('errBar').style.display = 'none'; }
+
 var currentState = {
   strategy: 'first_fit',
   totalMem: 4096,
@@ -328,9 +342,9 @@ function fetchSegmentation() {
       } else {
         try {
           var errData = JSON.parse(xhr.responseText);
-          alert('API Error: ' + (errData.error || 'Server error'));
+          showErr(errData.error || 'Server error');
         } catch(e) {
-          alert('API Error: ' + xhr.status);
+          showErr('Server error (' + xhr.status + ')');
         }
       }
     }
@@ -515,18 +529,19 @@ function updateConfigFromInputs() {
 }
 
 function allocSegment() {
+  clearErr();
   updateConfigFromInputs();
   var name = document.getElementById('inp-seg-name').value.trim();
   var size = parseInt(document.getElementById('inp-seg-size').value);
 
-  if (!name || isNaN(size) || size <= 0) {
-    alert('Please provide valid name and size.');
-    return;
-  }
+  if (!name) { showErr('Segment name is required'); return; }
+  if (name.length > 20) { showErr('Segment name too long (max 20 characters)'); return; }
+  if (isNaN(size) || size <= 0) { showErr('Size must be a positive integer'); return; }
+  if (size > currentState.totalMem) { showErr('Size (' + size + ') exceeds total memory (' + currentState.totalMem + ')'); return; }
 
   var snap = currentState.snapshots.length ? currentState.snapshots[currentState.snapshots.length - 1] : null;
   if (snap && snap.segments && snap.segments[name]) {
-    alert('Segment "' + name + '" already exists.');
+    showErr('Segment "' + name + '" already exists. Choose a different name.');
     return;
   }
 

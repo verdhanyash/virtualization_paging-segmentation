@@ -655,7 +655,6 @@ Architecture:
 
 Language:        Python 3.10+
 Web Framework:   Flask (replaced Dash)
-Server Charts:   Plotly (visualization/ modules)
 Client Charts:   Chart.js 4.4.1 (in index.html, segmentation.html)
 Font:            Geist Mono (Google Fonts, with monospace fallback)
 Theme:           Jet black (#0a0a0a) / White (#f0f0f0)
@@ -667,7 +666,6 @@ requirements.txt:
   flask==3.1.0
   gunicorn==23.0.0
   pytest==8.3.4
-  plotly==5.20.0
 
 ================================================================================
                            GIT WORKFLOW
@@ -714,10 +712,10 @@ Requires algorithms complete:
   ✓ T7 (Comparison) — DONE
 
 Requires segmentation engine (T5) complete:
-  → T18 (Seg API) — TODO, needs T5 (DONE), CAN START
-  → T15 (Seg layout) — TODO, needs T18 (API must exist first)
-  → T16 (Seg JS) — TODO, needs T15 + T18
-  → T17 (Seg animations) — TODO, needs T15 + T16
+  → T18 (Seg API) — DONE
+  → T15 (Seg layout) — DONE
+  → T16 (Seg JS) — DONE
+  → T17 (Seg animations) — DONE
 
 Recommended order:
   T18 → T15 → T16 → T17

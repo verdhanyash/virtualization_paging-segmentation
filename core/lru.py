@@ -1,8 +1,9 @@
 """
-LRU Page Replacement Algorithm
+LRU Page Replacement Algorithm (T3)
+Uses core/engine.py PageTable + FramePool for memory management
 
 Description:
-Implements Least Recently Used (LRU) using OrderedDict.
+Implements Least Recently Used (LRU) using OrderedDict for recency tracking.
 
 Rules:
 - On HIT → move page to end (most recent)
@@ -18,10 +19,13 @@ total_faults = 10
 
 from collections import OrderedDict
 from typing import Dict, List, Optional
+from core.engine import PageTable, FramePool, detect_page_fault
 
 
 def run_lru(reference_string: List[int], frames: int) -> Dict:
-    memory: OrderedDict[int, bool] = OrderedDict()
+    page_table = PageTable()
+    frame_pool = FramePool(frames)
+    recency: OrderedDict[int, bool] = OrderedDict()  # LRU-specific: tracks access order
 
     steps: List[Dict] = []
     fault_positions: List[int] = []
@@ -30,22 +34,28 @@ def run_lru(reference_string: List[int], frames: int) -> Dict:
         evicted: Optional[int] = None
         fault = False
 
-        # HIT → move to most recent
-        if page in memory:
-            memory.move_to_end(page)
-
-        # FAULT
+        if not detect_page_fault(page, page_table):
+            # HIT — update recency (move to most recent)
+            recency.move_to_end(page)
         else:
+            # FAULT
             fault = True
             fault_positions.append(idx)
 
-            if len(memory) >= frames:
-                evicted, _ = memory.popitem(last=False)
+            if frame_pool.is_full():
+                # Evict least recently used (first in OrderedDict)
+                evicted = next(iter(recency))
+                freed_frame = page_table.unmap_page(evicted)
+                frame_pool.free(freed_frame)
+                del recency[evicted]
 
-            memory[page] = True
+            # Allocate new frame and map
+            new_frame = frame_pool.allocate()
+            page_table.map_page(page, new_frame)
+            recency[page] = True
 
-        # Frame state
-        frame_state = list(memory.keys())
+        # Frame state: use recency order (matches original LRU output format)
+        frame_state = list(recency.keys())
         while len(frame_state) < frames:
             frame_state.append(None)
 
@@ -65,33 +75,3 @@ def run_lru(reference_string: List[int], frames: int) -> Dict:
         "total_hits": len(reference_string) - len(fault_positions),
         "fault_positions": fault_positions
     }
-
-
-# ================= OPTIONAL RUNNER =================
-
-
-def main():
-    ref = input("Enter reference string (space separated): ")
-    frames = int(input("Enter number of frames: "))
-
-    reference_string = list(map(int, ref.split()))
-
-    result = run_lru(reference_string, frames)
-
-    print("\n--- LRU RESULT ---")
-    print("Total Faults:", result["total_faults"])
-    print("Total Hits:", result["total_hits"])
-
-    hit_ratio = result["total_hits"] / len(reference_string)
-    fault_ratio = result["total_faults"] / len(reference_string)
-
-    print("Hit Ratio:", round(hit_ratio, 2))
-    print("Fault Ratio:", round(fault_ratio, 2))
-
-    print("\nSteps:")
-    for step in result["steps"]:
-        print(step)
-
-
-if __name__ == "__main__":
-    main()

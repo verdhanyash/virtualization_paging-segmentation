@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Virtual Memory Simulator</title>
+<link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -15,110 +16,115 @@
   --t:#f0f0f0;--t2:#777;--t3:#444;--t4:#2a2a2a;
   --white:#f0f0f0;
 }
-body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh}
+body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:14px;line-height:1.6;min-height:100vh}
 
 /* Nav - IDENTICAL to algo pages */
-nav{padding:16px 40px;border-bottom:1px solid var(--b);display:flex;gap:6px;align-items:center}
-nav a{color:var(--t2);text-decoration:none;font-size:11px;padding:6px 14px;border-radius:3px;letter-spacing:.05em;text-transform:uppercase;transition:all .15s}
+nav{padding:18px 40px;border-bottom:1px solid var(--b);display:flex;gap:8px;align-items:center}
+nav a{color:var(--t2);text-decoration:none;font-family:'Inter',sans-serif;font-size:13px;padding:8px 16px;border-radius:4px;letter-spacing:.04em;text-transform:uppercase;font-weight:500;transition:all .15s}
 nav a:hover{color:var(--t)}
 nav a.active{color:var(--t);background:var(--bg3);border:1px solid var(--b)}
-nav .sep{color:var(--t4);margin:0 2px}
+nav .sep{color:var(--t4);margin:0 4px}
 
-.app{max-width:1120px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:14px}
+.app{max-width:1120px;margin:0 auto;padding:28px;display:flex;flex-direction:column;gap:18px}
 
 /* Hero */
-.hero{text-align:center;padding:48px 0 36px;position:relative}
-.hero-title{font-size:22px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px}
-.hero-sub{font-size:12px;color:var(--t2);letter-spacing:.06em;max-width:560px;margin:0 auto;line-height:1.8}
-.hero-line{width:48px;height:2px;background:var(--white);margin:20px auto 0;border-radius:1px}
+.hero{text-align:center;padding:56px 0 44px;position:relative}
+.hero-title{font-family:'Inter',sans-serif;font-size:30px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+.hero-sub{font-size:14px;color:var(--t2);letter-spacing:.04em;max-width:600px;margin:0 auto;line-height:1.8}
+.hero-line{width:56px;height:2px;background:var(--white);margin:24px auto 0;border-radius:1px}
 
 /* Panel */
-.pnl{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:16px}
-.sec{font-size:9px;color:var(--t2);letter-spacing:.12em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--b);margin-bottom:14px}
+.pnl{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:22px}
+.sec{font-family:'Inter',sans-serif;font-size:12px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;padding-bottom:14px;border-bottom:1px solid var(--b);margin-bottom:18px}
 
 /* Algorithm Cards */
-.algo-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.algo-card{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:20px;cursor:pointer;transition:all .2s;text-decoration:none;color:var(--t);display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
+.algo-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.algo-card{background:var(--bg2);border:1px solid var(--b);border-radius:4px;padding:24px;cursor:pointer;transition:all .2s;text-decoration:none;color:var(--t);display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
 .algo-card:hover{border-color:var(--b3);transform:translateY(-2px);box-shadow:0 4px 24px rgba(0,0,0,.4)}
 .algo-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--white);opacity:0;transition:opacity .2s}
 .algo-card:hover::before{opacity:1}
-.ac-icon{font-size:24px;opacity:.6}
-.ac-name{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
-.ac-desc{font-size:11px;color:var(--t2);line-height:1.6}
-.ac-tag{display:inline-flex;align-items:center;padding:3px 8px;background:rgba(255,255,255,.05);border:1px solid var(--b);border-radius:2px;font-size:9px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;width:fit-content}
-.ac-arrow{font-size:10px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-top:auto;padding-top:8px;transition:color .2s}
+.ac-icon{font-size:28px;opacity:.6}
+.ac-name{font-family:'Inter',sans-serif;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.ac-desc{font-size:13px;color:var(--t2);line-height:1.6}
+.ac-tag{display:inline-flex;align-items:center;padding:4px 10px;background:rgba(255,255,255,.05);border:1px solid var(--b);border-radius:3px;font-size:10px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;width:fit-content}
+.ac-arrow{font-size:12px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-top:auto;padding-top:10px;transition:color .2s}
 .algo-card:hover .ac-arrow{color:var(--white)}
 
 /* Quick Compare */
-.qc-layout{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end}
-.qc-left{display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:end}
-.field{display:flex;flex-direction:column;gap:5px}
-.lbl{font-size:9px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase}
-input[type=text]{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:8px 10px;font-family:inherit;font-size:13px;border-radius:2px;outline:none;width:100%}
+.qc-layout{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:end}
+.qc-left{display:grid;grid-template-columns:1fr 140px;gap:14px;align-items:end}
+.field{display:flex;flex-direction:column;gap:6px}
+.lbl{font-family:'Inter',sans-serif;font-size:11px;color:var(--t2);letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+input[type=text]{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:10px 14px;font-family:inherit;font-size:14px;border-radius:3px;outline:none;width:100%}
 input[type=text]:focus{border-color:var(--b3)}
-.frame-row{display:flex;gap:8px;align-items:center}
+.frame-row{display:flex;gap:10px;align-items:center}
 .frame-row input[type=range]{flex:1;accent-color:var(--white);width:100%}
-button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;border:none}
+button{padding:9px 18px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border-radius:3px;transition:all .15s;border:none}
 .bp{background:var(--white);color:#0a0a0a}
 .bp:hover{opacity:.85}
 .bd{background:transparent;color:var(--t2);border:1px solid var(--b)}
 .bd:hover{border-color:var(--b3);color:var(--t)}
+.bs{background:transparent;color:var(--t);border:1px solid var(--b2)}
+.bs:hover{border-color:var(--b3)}
 
 /* Comparison Results */
-.cmp-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
-.cmp-card{background:var(--bg3);border-radius:3px;padding:16px;text-align:center}
-.cc-name{font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
-.cc-faults{font-size:32px;font-weight:600;margin-bottom:2px}
-.cc-sub{font-size:10px;color:var(--t3)}
+.cmp-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+.cmp-card{background:var(--bg3);border-radius:4px;padding:22px;text-align:center}
+.cc-name{font-family:'Inter',sans-serif;font-size:12px;color:var(--t2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;font-weight:500}
+.cc-faults{font-family:'Inter',sans-serif;font-size:38px;font-weight:700;margin-bottom:4px}
+.cc-sub{font-size:12px;color:var(--t3)}
 .cc-best{border:1px solid rgba(255,255,255,.15)}
 .cc-best .cc-faults{color:var(--white)}
 .cc-best .cc-sub{color:var(--t2)}
 
 /* Charts */
-.charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.chart-title{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em}
-.chart-wrap{position:relative;height:200px}
-.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t2)}
-.leg-dot{width:8px;height:8px;border-radius:1px}
-.anomaly-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.2);border-radius:2px;font-size:9px;color:var(--white);text-transform:uppercase;letter-spacing:.08em}
-.anim-dot{width:5px;height:5px;background:var(--white);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
+.charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.chart-title{font-family:'Inter',sans-serif;font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;font-weight:500}
+.chart-wrap{position:relative;height:220px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2)}
+.leg-dot{width:10px;height:10px;border-radius:2px}
+.anomaly-badge{font-family:'Inter',sans-serif;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.2);border-radius:3px;font-size:11px;color:var(--white);text-transform:uppercase;letter-spacing:.06em;font-weight:500}
+.anim-dot{width:6px;height:6px;background:var(--white);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
-.empty{text-align:center;padding:28px 0;color:var(--t3);font-size:11px}
+.empty{text-align:center;padding:32px 0;color:var(--t3);font-size:13px}
 
 /* Seg Compare */
-.seg-preset-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.seg-cmp-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.seg-card{background:var(--bg3);border-radius:3px;padding:14px;text-align:center;transition:border-color .2s}
-.seg-card-name{font-size:10px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
-.seg-card-val{font-size:24px;font-weight:600;margin-bottom:2px}
-.seg-card-sub{font-size:10px;color:var(--t3)}
+.seg-preset-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.seg-cmp-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.seg-card{background:var(--bg3);border-radius:4px;padding:18px;text-align:center;transition:border-color .2s}
+.seg-card-name{font-family:'Inter',sans-serif;font-size:12px;color:var(--t2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;font-weight:500}
+.seg-card-val{font-family:'Inter',sans-serif;font-size:28px;font-weight:700;margin-bottom:4px}
+.seg-card-sub{font-size:12px;color:var(--t3)}
 .seg-card.best-card{border:1px solid rgba(255,255,255,.15)}
 .seg-card.best-card .seg-card-val{color:var(--white)}
-.seg-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
-.seg-detail{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em}
-.seg-detail span{color:var(--t2);font-size:11px;font-weight:500}
+.seg-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.seg-detail{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em}
+.seg-detail span{color:var(--t2);font-size:13px;font-weight:500}
 .seg-detail.warn span{color:#ff9800}
 .seg-detail.err span{color:#f44336}
 
 /* Concepts */
-.concepts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.concept{background:var(--bg3);border-radius:3px;padding:16px 20px;border-left:3px solid var(--b2)}
-.concept-title{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
-.concept-text{font-size:11px;color:var(--t2);line-height:1.6}
+.concepts{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.concept{background:var(--bg3);border-radius:4px;padding:20px 24px;border-left:3px solid var(--b2)}
+.concept-title{font-family:'Inter',sans-serif;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.concept-text{font-size:13px;color:var(--t2);line-height:1.7}
 
 @media(max-width:720px){
   .algo-cards{grid-template-columns:repeat(2,1fr)}
   .charts-2col{grid-template-columns:1fr}
   .seg-cmp-row{grid-template-columns:repeat(2,1fr)}
   .concepts{grid-template-columns:1fr}
+  .addr-row{grid-template-columns:1fr !important}
   .cmp-row{grid-template-columns:1fr}
   .seg-cmp-row{grid-template-columns:1fr}
   .qc-layout{grid-template-columns:1fr}
   .qc-left{grid-template-columns:1fr}
 }
+.err-bar{display:none;margin:0 auto;max-width:1120px;padding:12px 22px;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);border-radius:4px;font-size:13px;color:#ff6b6b;letter-spacing:.03em;margin-top:8px;animation:errIn .2s ease}
+@keyframes errIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
@@ -132,6 +138,7 @@ button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;lette
   <span class="sep">|</span>
   <a href="/segmentation">Segmentation</a>
 </nav>
+<div class="err-bar" id="errBar"></div>
 
 <div class="app">
 
@@ -286,10 +293,44 @@ button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;lette
     </div>
   </div>
 
+  <!-- Address Translation Tool -->
+  <div class="pnl">
+    <div class="sec">Address Translation &mdash; core/engine.py</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start" class="addr-row">
+      <div>
+        <div style="margin-bottom:14px">
+          <div class="lbl" style="margin-bottom:5px">Virtual Address</div>
+          <input type="text" id="addrIn" value="5000" placeholder="e.g. 5000" style="width:100%">
+        </div>
+        <div style="margin-bottom:14px">
+          <div class="lbl" style="margin-bottom:5px">Page Size (bytes)</div>
+          <input type="text" id="pgSizeIn" value="4096" placeholder="e.g. 4096" style="width:100%">
+        </div>
+        <button class="bp" onclick="runTranslate()" id="translateBtn">&#9654; Translate</button>
+        <button class="bd" onclick="resetTranslate()" style="margin-left:6px">&#10227; Reset</button>
+      </div>
+      <div id="addrResult" style="background:var(--bg3);border-radius:3px;padding:16px 20px;min-height:120px;display:flex;flex-direction:column;justify-content:center">
+        <div class="empty" id="addrEmpty">Enter a virtual address and page size, then click Translate</div>
+        <div id="addrOutput" style="display:none">
+          <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Translation Result</div>
+          <div style="display:flex;gap:24px;margin-bottom:12px">
+            <div><div class="lbl">Page Number</div><div style="font-size:28px;font-weight:600;color:var(--white)" id="addrPage">&mdash;</div></div>
+            <div><div class="lbl">Offset</div><div style="font-size:28px;font-weight:600;color:#888" id="addrOffset">&mdash;</div></div>
+          </div>
+          <div style="font-size:10px;color:var(--t3);border-top:1px solid var(--b);padding-top:8px" id="addrExplain"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Key Concepts -->
   <div class="pnl">
     <div class="sec">Key Concepts</div>
     <div class="concepts">
+      <div class="concept">
+        <div class="concept-title">Demand Paging</div>
+        <div class="concept-text">Pages are loaded into physical memory only when accessed &mdash; not in advance. On the first reference to a page not yet in RAM, a <strong>page fault</strong> fires, the OS fetches the page from disk, maps it via the page table, and resumes execution. This is exactly what every simulation on this site models: a reference string drives page accesses, and the replacement algorithm decides which frame to evict when memory is full.</div>
+      </div>
       <div class="concept">
         <div class="concept-title">Page Fault</div>
         <div class="concept-text">When a referenced page is not in any frame, a page fault occurs. The OS must load it from disk &mdash; an expensive operation.</div>
@@ -310,8 +351,18 @@ button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;lette
 <script>
 var allResults = null;
 var cComp = null, cBelady = null, cRace = null;
+var errTimer = null;
 
 function $(id) { return document.getElementById(id); }
+
+function showErr(msg) {
+  var bar = $('errBar');
+  bar.textContent = '\u26A0 ' + msg;
+  bar.style.display = 'block';
+  if (errTimer) clearTimeout(errTimer);
+  errTimer = setTimeout(function() { bar.style.display = 'none'; }, 6000);
+}
+function clearErr() { $('errBar').style.display = 'none'; }
 
 function parseRef() {
   return $('refIn').value.trim().split(/[\s,]+/).map(Number).filter(function(n) { return !isNaN(n) && n > 0; });
@@ -329,9 +380,11 @@ var CHART_AXIS = {
 };
 
 function runCompare() {
+  clearErr();
   var ref = parseRef();
   var fc = getFC();
-  if (ref.length === 0) { alert('Enter a valid reference string'); return; }
+  if (ref.length === 0) { showErr('Enter a valid reference string (positive integers, comma-separated)'); return; }
+  if (ref.length > 100) { showErr('Reference string too long (max 100 entries). Got ' + ref.length + '.'); return; }
 
   var btn = document.querySelector('.bp');
   btn.innerHTML = '&#8987; Loading...';
@@ -348,7 +401,7 @@ function runCompare() {
         allResults = JSON.parse(xhr.responseText);
         renderComparison();
       } else {
-        alert('Error: ' + xhr.responseText);
+        try { showErr(JSON.parse(xhr.responseText).error); } catch(e) { showErr('Server error (' + xhr.status + ')'); }
       }
     }
   };
@@ -659,6 +712,52 @@ function resetSegCompare() {
   if (cSegExt) { cSegExt.destroy(); cSegExt = null; }
   if (cSegUtil) { cSegUtil.destroy(); cSegUtil = null; }
 }
+
+// --- Address Translation (core/engine.py) ---
+function runTranslate() {
+  clearErr();
+  var addr = parseInt($('addrIn').value);
+  var ps = parseInt($('pgSizeIn').value);
+  if (isNaN(addr) || addr < 0) { showErr('Virtual address must be a non-negative integer'); return; }
+  if (isNaN(ps) || ps <= 0) { showErr('Page size must be a positive integer'); return; }
+  if (ps > 1048576) { showErr('Page size too large (max 1MB = 1048576 bytes)'); return; }
+  if (addr > 4294967295) { showErr('Virtual address exceeds 32-bit range (max 4294967295)'); return; }
+
+  var btn = $('translateBtn');
+  btn.innerHTML = '&#8987; ...';
+  btn.disabled = true;
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/translate', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      btn.innerHTML = '&#9654; Translate';
+      btn.disabled = false;
+      if (xhr.status === 200) {
+        var r = JSON.parse(xhr.responseText);
+        $('addrEmpty').style.display = 'none';
+        $('addrOutput').style.display = '';
+        $('addrPage').textContent = r.page_number;
+        $('addrOffset').textContent = r.offset;
+        $('addrExplain').textContent = 'address ' + r.virtual_address + ' \u00F7 page_size ' + r.page_size + ' = page ' + r.page_number + ', remainder ' + r.offset;
+      } else {
+        try { showErr(JSON.parse(xhr.responseText).error); } catch(e) { showErr('Server error'); }
+      }
+    }
+  };
+  xhr.send(JSON.stringify({ virtual_address: addr, page_size: ps }));
+}
+
+function resetTranslate() {
+  $('addrEmpty').style.display = '';
+  $('addrOutput').style.display = 'none';
+  $('addrIn').value = '5000';
+  $('pgSizeIn').value = '4096';
+}
+
+$('addrIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') runTranslate(); });
+$('pgSizeIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') runTranslate(); });
 </script>
 </body>
 </html>
