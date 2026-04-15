@@ -15,6 +15,19 @@
   var livePollInt = null;
   var pendingCustomOps = [];
 
+  function showSegToast(msg, type) {
+    var existing = document.getElementById('seg-toast');
+    if (existing) existing.remove();
+    var div = document.createElement('div');
+    div.id = 'seg-toast';
+    div.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;padding:12px 20px;border-radius:6px;font-size:12px;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:opacity .3s;';
+    div.style.background = type === 'error' ? 'rgba(220,38,38,.92)' : 'rgba(37,99,235,.92)';
+    div.style.color = '#fff';
+    div.textContent = msg;
+    document.body.appendChild(div);
+    setTimeout(function() { div.style.opacity = '0'; setTimeout(function() { div.remove(); }, 300); }, 5000);
+  }
+
   function toggleCoSize() {
     var act = document.getElementById('co-action').value;
     document.getElementById('co-size-container').style.display = (act === 'alloc') ? '' : 'none';
@@ -162,7 +175,12 @@
           var data = JSON.parse(xhr.responseText);
           state.processes = data.processes || [];
           state.systemInfo = data.system || {};
-          state.snapshots = (data.snapshots || (data.simulation && data.simulation.snapshots)) ? (data.snapshots || data.simulation.snapshots) : [];
+          /* Manual mode returns flat array; live mode returns { simulation: { snapshots: [...] } } */
+          if (Array.isArray(data)) {
+            state.snapshots = data;
+          } else {
+            state.snapshots = data.snapshots || (data.simulation && data.simulation.snapshots) || [];
+          }
 
           /* rebuild color map from process order */
           procColorMap = {};
@@ -177,10 +195,12 @@
       } else {
         try {
           var errData = JSON.parse(xhr.responseText);
-          alert('Segmentation error: ' + (errData.error || xhr.responseText));
+          showSegToast(errData.error || 'Unknown error', 'error');
         } catch (_) {
-          console.error('API error', xhr.status, xhr.responseText);
+          showSegToast('Connection error — retrying...', 'error');
         }
+        /* Auto-retry on transient failures */
+        setTimeout(function() { if (!state.loading) loadLiveData(); }, 3000);
       }
     };
   }
@@ -231,6 +251,14 @@
   }
 
   function refreshLive() {
+    /* Read form inputs into state */
+    var tm = parseInt(document.getElementById('inp-total-mem').value, 10);
+    var bs = parseInt(document.getElementById('inp-block-size').value, 10);
+    var mp = parseInt(document.getElementById('inp-max-procs').value, 10);
+    if (tm > 0) state.totalMem = tm;
+    if (bs > 0) state.blockSize = bs;
+    if (mp > 0) state.maxProcs = mp;
+
     state.extraOps = [];
     procColorMap = {};
     procColorIdx = 0;

@@ -156,15 +156,20 @@
     <div class="chart-non-hdr">
       <span class="chart-title">B&eacute;lady's Anomaly (FIFO, frames 1&ndash;10)</span>
       <span id="anomalyBadge" style="display:none" class="anomaly-badge"><span class="anim-dot"></span>Anomaly Detected</span>
+      <button class="bs" id="triggerAnomalyBtn" onclick="triggerBeladyAnomaly()" style="margin-left:auto;font-size:10px;padding:4px 10px" title="Load the classic reference string that triggers Bélády's Anomaly">&#9888; Trigger Anomaly</button>
     </div>
     <div id="beladyEmpty" class="empty" style="padding:16px 0;font-size: 11.2px">Run simulation to analyze B&eacute;lady's anomaly</div>
+    <div id="beladyNoAnomaly" style="display:none;padding:8px 14px;margin-bottom:8px;background:rgba(37,99,235,.06);border-left:3px solid var(--accent-blue);font-size:11px;color:var(--text-dim);line-height:1.6">
+      <strong style="color:var(--accent-blue)">No anomaly detected</strong> for this reference string. The chart shows the <em>normal</em> pattern: more frames &rarr; fewer faults. B&eacute;lady's Anomaly only occurs with specific page sequences. Click <strong>"&#9888; Trigger Anomaly"</strong> to see the classic example where 4 frames cause <em>more</em> faults than 3.
+    </div>
     <div class="chart-wrap" id="beladyWrap" style="display:none"><canvas id="beladyChart"></canvas></div>
   </div>
 
   <!-- Fault Timeline Chart -->
   <div class="panel">
     <div class="chart-non-hdr">
-      <span class="chart-title">Cumulative Fault Timeline</span>
+      <span class="chart-title">Fault &amp; Hit Timeline</span>
+      <span style="font-size:10px;color:var(--text-dimmer);margin-left:8px">&#11044; Red = Fault &nbsp; &#11044; Green = Hit &nbsp; &#8212; Blue line = Cumulative</span>
     </div>
     <div id="timelineEmpty" class="empty" style="padding:16px 0;font-size: 11.2px">Run simulation to see fault progression</div>
     <div class="chart-wrap" id="timelineWrap" style="display:none"><canvas id="timelineChart"></canvas></div>

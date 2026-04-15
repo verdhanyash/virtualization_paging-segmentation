@@ -141,6 +141,9 @@ function renderStep(si) {
     bsUI.innerHTML = bsHtml;
     bsUI.scrollTop = bsUI.scrollHeight;
   }
+
+  // Update timeline chart to track current step
+  if (typeof renderTimelineChart === 'function' && cTimeline) renderTimelineChart();
 }
 
 function renderHistory() {
@@ -194,87 +197,250 @@ var CHART_AXIS = {
   border: { color:'rgba(37,99,235,.36)' }
 };
 
+function triggerBeladyAnomaly() {
+  // Classic reference string that triggers Bélády's Anomaly:
+  // 3 frames → 9 faults, 4 frames → 10 faults
+  var refEl = $('refIn');
+  if (refEl) refEl.value = '1,2,3,4,1,2,5,1,2,3,4,5';
+  var liveToggle = $('liveToggle');
+  if (liveToggle) liveToggle.checked = false;
+  if (typeof toggleSegMode === 'function') toggleSegMode();
+  if (refEl) refEl.readOnly = false;
+  runSim();
+}
+
 function renderCharts() {
   if (!allResults) return;
 
   if (cBelady) { cBelady.destroy(); cBelady = null; }
   if (cTimeline) { cTimeline.destroy(); cTimeline = null; }
 
-  // Belady's anomaly chart
+  // ═══ Belady's Anomaly Chart ═══
   var bel = allResults.belady;
   var anomalyFs = {};
   for (var a = 0; a < bel.anomaly_at.length; a++) { anomalyFs[bel.anomaly_at[a][1]] = true; }
   $('anomalyBadge').style.display = bel.anomaly_found ? '' : 'none';
+  var noAnomalyEl = $('beladyNoAnomaly');
+  if (noAnomalyEl) noAnomalyEl.style.display = bel.anomaly_found ? 'none' : '';
   hide('beladyEmpty'); show('beladyWrap');
 
   var fLabels = Object.keys(bel.fault_counts).map(Number);
   var fData = [];
   var ptColors = [];
   var ptSizes = [];
+  var ptStyles = [];
   for (var i = 0; i < fLabels.length; i++) {
     fData.push(bel.fault_counts[fLabels[i]]);
-    ptColors.push(anomalyFs[fLabels[i]] ? '#dc2626' : '#2563eb');
-    ptSizes.push(anomalyFs[fLabels[i]] ? 7 : 3);
+    var isAnomaly = anomalyFs[fLabels[i]];
+    ptColors.push(isAnomaly ? '#dc2626' : '#2563eb');
+    ptSizes.push(isAnomaly ? 8 : 4);
+    ptStyles.push(isAnomaly ? 'triangle' : 'circle');
   }
+
+  // Highlight the current frame count
+  var curFC = getFC();
+  var curFCIdx = fLabels.indexOf(curFC);
 
   cBelady = new Chart($('beladyChart'), {
     type:'line',
     data:{
       labels:fLabels,
-      datasets:[{
-        label:'Faults', data:fData,
-        borderColor:'#1d4ed8',
-        backgroundColor:'rgba(37,99,235,.1)',
-        pointBackgroundColor:ptColors,
-        pointBorderColor:ptColors,
-        pointRadius:ptSizes,
-        tension:.2, borderWidth:2.2, fill:true
-      }]
+      datasets:[
+        {
+          label:'Page Faults', data:fData,
+          borderColor:'#1d4ed8',
+          backgroundColor: function(ctx) {
+            var c = ctx.chart.ctx;
+            var g = c.createLinearGradient(0, 0, 0, ctx.chart.height);
+            g.addColorStop(0, 'rgba(37,99,235,.25)');
+            g.addColorStop(1, 'rgba(37,99,235,.02)');
+            return g;
+          },
+          pointBackgroundColor:ptColors,
+          pointBorderColor:ptColors,
+          pointRadius:ptSizes,
+          pointStyle:ptStyles,
+          pointHoverRadius: 10,
+          tension:.2, borderWidth:2.5, fill:true
+        },
+        // Current frame count marker
+        curFCIdx >= 0 ? {
+          label:'Current Frames',
+          data: fLabels.map(function(f, idx) { return idx === curFCIdx ? fData[idx] : null; }),
+          pointBackgroundColor: '#f59e0b',
+          pointBorderColor: '#f59e0b',
+          pointRadius: 10,
+          pointStyle: 'star',
+          pointHoverRadius: 14,
+          borderWidth: 0,
+          showLine: false
+        } : null
+      ].filter(Boolean)
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
+      interaction: { mode: 'index', intersect: false },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(15,23,42,.92)',
+          titleFont:{family:CHART_FONT, size:12},
+          bodyFont:{family:CHART_FONT, size:11},
+          padding:10,
+          callbacks:{
+            title: function(items) {
+              var f = items[0].label;
+              return f + ' Frame' + (f > 1 ? 's' : '');
+            },
+            label: function(item) {
+              if (item.datasetIndex > 0) return '\u2605 Your current frame count';
+              var faults = item.parsed.y;
+              var frames = item.label;
+              var prevFaults = item.dataIndex > 0 ? fData[item.dataIndex - 1] : null;
+              var lines = [faults + ' page fault' + (faults !== 1 ? 's' : '')];
+              if (prevFaults !== null) {
+                var diff = faults - prevFaults;
+                if (diff > 0) lines.push('\u26A0 +' + diff + ' more than ' + (frames-1) + ' frames (ANOMALY!)');
+                else if (diff < 0) lines.push('\u2193 ' + Math.abs(diff) + ' fewer than ' + (frames-1) + ' frames');
+                else lines.push('\u2192 Same as ' + (frames-1) + ' frames');
+              }
+              return lines;
+            },
+            labelColor: function(item) {
+              if (item.datasetIndex > 0) return { borderColor:'#f59e0b', backgroundColor:'#f59e0b' };
+              var isAn = anomalyFs[fLabels[item.dataIndex]];
+              return { borderColor: isAn ? '#dc2626' : '#2563eb', backgroundColor: isAn ? '#dc2626' : '#2563eb' };
+            }
+          }
+        }
+      },
       scales:{
-        x:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Frames',color:'#204768',font:{family:CHART_FONT,size: 11}}}),
-        y:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Faults',color:'#204768',font:{family:CHART_FONT,size: 11}}})
+        x:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Number of Frames',color:'#204768',font:{family:CHART_FONT,size: 11}}}),
+        y:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Page Faults',color:'#204768',font:{family:CHART_FONT,size: 11}}, beginAtZero:true})
       }
     }
   });
 
-  // Fault timeline chart
+  // ═══ Fault Timeline Chart (bar per step + cumulative line) ═══
   hide('timelineEmpty'); show('timelineWrap');
+  renderTimelineChart();
+}
+
+function renderTimelineChart() {
+  if (!result || !result.steps) return;
+  if (cTimeline) { cTimeline.destroy(); cTimeline = null; }
+
+  var steps = result.steps;
+  var stepLbls = [];
+  var barData = [];
+  var barColors = [];
   var cumData = [];
   var cnt = 0;
-  for (var i = 0; i < result.steps.length; i++) {
-    if (result.steps[i].fault) cnt++;
+  var activeStep = curStep >= 0 ? curStep : steps.length - 1;
+
+  for (var i = 0; i < steps.length; i++) {
+    stepLbls.push(i + 1);
+    if (steps[i].fault) {
+      cnt++;
+      barData.push(1);
+      barColors.push(i <= activeStep ? 'rgba(239,68,68,.8)' : 'rgba(239,68,68,.2)');
+    } else {
+      barData.push(-0.3);
+      barColors.push(i <= activeStep ? 'rgba(16,185,129,.7)' : 'rgba(16,185,129,.15)');
+    }
     cumData.push(cnt);
   }
-  var stepLbls = [];
-  for (var i = 0; i < result.steps.length; i++) { stepLbls.push(i + 1); }
 
   cTimeline = new Chart($('timelineChart'), {
-    type:'line',
+    type:'bar',
     data:{
       labels:stepLbls,
-      datasets:[{
-        label:'Cumulative Faults', data:cumData,
-        borderColor:'#2563eb',
-        backgroundColor:'rgba(37,99,235,.14)',
-        pointRadius:3,
-        pointBackgroundColor:'#1d4ed8',
-        tension:0.08, borderWidth:2.2, fill:true
-      }]
+      datasets:[
+        {
+          label:'Fault / Hit',
+          data:barData,
+          backgroundColor:barColors,
+          borderRadius: 2,
+          borderSkipped: false,
+          yAxisID:'y',
+          order:2
+        },
+        {
+          type:'line',
+          label:'Total Faults',
+          data:cumData,
+          borderColor:'#2563eb',
+          backgroundColor:'rgba(37,99,235,.08)',
+          pointRadius: function(ctx) { return ctx.dataIndex === activeStep ? 7 : 2; },
+          pointBackgroundColor: function(ctx) { return ctx.dataIndex === activeStep ? '#f59e0b' : '#2563eb'; },
+          pointBorderColor: function(ctx) { return ctx.dataIndex === activeStep ? '#f59e0b' : '#2563eb'; },
+          tension:0.15, borderWidth:2.5, fill:false,
+          yAxisID:'y2',
+          order:1
+        }
+      ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
+      interaction: { mode: 'index', intersect: false },
+      plugins:{
+        legend:{
+          display:true,
+          labels:{ color:'#204768', font:{family:CHART_FONT, size:10}, boxWidth:12, padding:10,
+            generateLabels: function() {
+              return [
+                { text: 'Fault', fillStyle:'rgba(239,68,68,.8)', strokeStyle:'transparent', lineWidth:0 },
+                { text: 'Hit', fillStyle:'rgba(16,185,129,.7)', strokeStyle:'transparent', lineWidth:0 },
+                { text: 'Cumulative', fillStyle:'transparent', strokeStyle:'#2563eb', lineWidth:2 }
+              ];
+            }
+          }
+        },
+        tooltip:{
+          backgroundColor:'rgba(15,23,42,.92)',
+          titleFont:{family:CHART_FONT, size:12},
+          bodyFont:{family:CHART_FONT, size:11},
+          padding:10,
+          callbacks:{
+            title: function(items) {
+              var idx = items[0].dataIndex;
+              return 'Step ' + (idx+1) + ': Page ' + steps[idx].page;
+            },
+            label: function(item) {
+              if (item.datasetIndex === 0) {
+                return steps[item.dataIndex].fault
+                  ? '\u25C6 PAGE FAULT — loaded from disk'
+                  : '\u00B7 HIT — already in frame';
+              }
+              return 'Total faults so far: ' + item.parsed.y;
+            },
+            labelColor: function(item) {
+              if (item.datasetIndex === 0) {
+                var isFault = steps[item.dataIndex].fault;
+                return { borderColor: isFault ? '#ef4444' : '#10b981', backgroundColor: isFault ? '#ef4444' : '#10b981' };
+              }
+              return { borderColor:'#2563eb', backgroundColor:'#2563eb' };
+            }
+          }
+        }
+      },
       scales:{
-        x:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Step',color:'#204768',font:{family:CHART_FONT,size: 11}}}),
-        y:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Cumulative Faults',color:'#204768',font:{family:CHART_FONT,size: 11}}})
+        x:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Step (page reference)',color:'#204768',font:{family:CHART_FONT,size: 11}}}),
+        y:{
+          display:false,
+          min:-0.5, max:1.2
+        },
+        y2:Object.assign({}, CHART_AXIS, {
+          position:'right',
+          title:{display:true,text:'Total Faults',color:'#204768',font:{family:CHART_FONT,size: 11}},
+          beginAtZero:true,
+          grid:{drawOnChartArea:false}
+        })
       }
     }
   });
 }
+
 
 function runSim() {
   stopAuto();
