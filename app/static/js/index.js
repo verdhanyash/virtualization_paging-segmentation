@@ -62,23 +62,33 @@ var allResults = null;
           }
 
           if (xhr.status === 200) {
-            var payload = JSON.parse(xhr.responseText);
-            if (payload.timestamp) applyRealtimeDateUI(payload.timestamp);
-            if (payload.paging) {
-              if (payload.paging.meta && payload.paging.meta.reference_string) {
-                $('refIn').value = payload.paging.meta.reference_string.join(',');
-                if (payload.paging.meta.processes && payload.paging.meta.processes.length) {
-                  $('refIn').title = payload.paging.meta.processes
-                    .map(function (p) { return p.name + ' (' + p.pid + ')'; })
-                    .join(' | ');
-                  renderProcessSource(payload.paging.meta.processes);
+            try {
+              var payload = JSON.parse(xhr.responseText);
+              if (payload.timestamp) applyRealtimeDateUI(payload.timestamp);
+              if (payload.paging) {
+                if (payload.paging.meta && payload.paging.meta.reference_string) {
+                  $('refIn').value = payload.paging.meta.reference_string.join(',');
+                  if (payload.paging.meta.processes && payload.paging.meta.processes.length) {
+                    $('refIn').title = payload.paging.meta.processes
+                      .map(function (p) { return p.name + ' (' + p.pid + ')'; })
+                      .join(' | ');
+                    renderProcessSource(payload.paging.meta.processes);
+                  }
                 }
+                allResults = payload.paging;
+                renderComparison();
               }
-              allResults = payload.paging;
-              renderComparison();
+            } catch (e) {
+              console.error('Failed to parse API response:', e);
+              if (!opts.silent) alert('Error parsing server response.');
             }
           } else if (!opts.silent) {
-            alert('Error: ' + xhr.responseText);
+            try {
+              var errData = JSON.parse(xhr.responseText);
+              alert('Error: ' + (errData.error || xhr.responseText));
+            } catch (_) {
+              alert('Error: ' + xhr.responseText);
+            }
           }
         }
       };
@@ -244,9 +254,17 @@ var allResults = null;
           try {
             var data = JSON.parse(xhr.responseText);
             renderSegComparison(data);
-          } catch (e) { console.error('Seg compare parse error', e); }
+          } catch (e) {
+            console.error('Seg compare parse error', e);
+            alert('Error parsing segmentation comparison response: ' + e.message);
+          }
         } else {
-          console.error('Seg compare API error', xhr.status);
+          try {
+            var errData = JSON.parse(xhr.responseText);
+            alert('Segmentation compare error: ' + (errData.error || xhr.responseText));
+          } catch (_) {
+            alert('Segmentation compare error (HTTP ' + xhr.status + '): ' + xhr.responseText);
+          }
         }
       };
       xhr.send();
@@ -262,8 +280,9 @@ var allResults = null;
         var srcHtml = '';
         for (var p = 0; p < data.process_source.length; p++) {
           var ps = data.process_source[p];
-          var memMB = Math.round(ps.mem_kb / 1024);
-          srcHtml += '<span class="proc-chip">' + ps.name + ' <span class="pc-mem">' + memMB + 'MB</span></span>';
+          var memKb = (typeof ps.mem_kb === 'number' && Number.isFinite(ps.mem_kb)) ? ps.mem_kb : 0;
+          var memMB = memKb > 0 ? Math.round(memKb / 1024) + 'MB' : '—';
+          srcHtml += '<span class="proc-chip">' + ps.name + ' <span class="pc-mem">' + memMB + '</span></span>';
         }
         srcEl.innerHTML = srcHtml;
         srcEl.style.display = '';
@@ -394,7 +413,7 @@ var allResults = null;
       xhr.open('GET', '/api/realtime-date', true);
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
-          applyRealtimeDateUI(JSON.parse(xhr.responseText));
+          try { applyRealtimeDateUI(JSON.parse(xhr.responseText)); } catch(e) {}
         }
       };
       xhr.send();

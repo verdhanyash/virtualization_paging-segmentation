@@ -23,9 +23,9 @@ The project is structured as reusable core algorithm modules plus a web applicat
 - Backend: Python, Flask
 - Algorithms: Pure Python modules in core
 - Frontend: HTML templates, vanilla JavaScript, shared CSS
-- Charts: Chart.js (client), Plotly helpers (server-side modules)
+- Charts: Chart.js (client-side)
 - Tests: pytest
-- Runtime options: local Flask app, Gunicorn process, Vercel serverless target
+- Runtime options: local Flask app, Gunicorn process
 
 ## Project Structure
 
@@ -64,9 +64,7 @@ The project is structured as reusable core algorithm modules plus a web applicat
 │   ├── test_optimal.py
 │   └── test_segmentation.py
 ├── scripts/get_processes.ps1
-├── requirements.txt
-├── Procfile
-└── vercel.json
+└── requirements.txt
 ```
 
 ## What Is Implemented
@@ -166,7 +164,7 @@ Key query params:
 - algorithm: FIFO or LRU or Optimal
 - max_belady_frames: integer
 - live: 0 or 1
-- live_source: windows or synthetic
+- live_source: windows
 - window_size, max_page: live stream controls
 
 Optional segmentation block can be included with:
@@ -233,3 +231,4 @@ See docs/deployment/vercel.md for a step-by-step Vercel flow.
 - Core logic is cleanly separated from UI-specific rendering code
 - Frontend and backend are aligned around stable result payload contracts
 - Test suite validates algorithm correctness and segmentation behavior across edge cases
+- Paging JS is shared via paging-common.js; each algorithm page sets window.ALGO only

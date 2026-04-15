@@ -1,4 +1,4 @@
-﻿/* ══════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    *  STATE
    * ══════════════════════════════════════════════ */
   var state = {
@@ -175,7 +175,12 @@
           console.error('Parse error:', e);
         }
       } else {
-        console.error('API error', xhr.status, xhr.responseText);
+        try {
+          var errData = JSON.parse(xhr.responseText);
+          alert('Segmentation error: ' + (errData.error || xhr.responseText));
+        } catch (_) {
+          console.error('API error', xhr.status, xhr.responseText);
+        }
       }
     };
   }
@@ -203,7 +208,7 @@
     for (var i = 0; i < tabs.length; i++) {
       tabs[i].classList.toggle('on', tabs[i].getAttribute('data-strategy') === s);
     }
-    if (s === 'best_fit') document.getElementById('ax-lat').textContent = 'O(N log N)';
+    if (s === 'best_fit') document.getElementById('ax-lat').textContent = 'O(N)';
     else document.getElementById('ax-lat').textContent = 'O(N)';
 
     if (state.processes && state.processes.length > 0) {
@@ -688,5 +693,5 @@
    * ══════════════════════════════════════════════ */
   window.onload = function () {
     renderAll();
-    refreshLive();
+    // Don't auto-start — wait for user to click START_SIMULATION
   };

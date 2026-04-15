@@ -21,6 +21,9 @@ from typing import Dict, List, Optional
 
 
 def run_lru(reference_string: List[int], frames: int) -> Dict:
+    if not isinstance(frames, int) or frames <= 0:
+        raise ValueError(f"frames must be a positive integer, got {frames!r}")
+
     memory: OrderedDict[int, bool] = OrderedDict()
 
     steps: List[Dict] = []
@@ -67,31 +70,4 @@ def run_lru(reference_string: List[int], frames: int) -> Dict:
     }
 
 
-# ================= OPTIONAL RUNNER =================
-
-
-def main():
-    ref = input("Enter reference string (space separated): ")
-    frames = int(input("Enter number of frames: "))
-
-    reference_string = list(map(int, ref.split()))
-
-    result = run_lru(reference_string, frames)
-
-    print("\n--- LRU RESULT ---")
-    print("Total Faults:", result["total_faults"])
-    print("Total Hits:", result["total_hits"])
-
-    hit_ratio = result["total_hits"] / len(reference_string)
-    fault_ratio = result["total_faults"] / len(reference_string)
-
-    print("Hit Ratio:", round(hit_ratio, 2))
-    print("Fault Ratio:", round(fault_ratio, 2))
-
-    print("\nSteps:")
-    for step in result["steps"]:
-        print(step)
-
-
-if __name__ == "__main__":
-    main()
+

@@ -3,28 +3,17 @@ import csv
 import io
 import os
 import subprocess
-import threading
-from collections import deque
+from datetime import datetime
 from core.segmentation import simulate_fragmentation
 from flask import Flask, request, jsonify, render_template
 from core.fifo import run_fifo, detect_beladys_anomaly
 from core.lru import run_lru
 from core.optimal import run_optimal
 
-try:
-    from PyQt5.QtCore import QDateTime
-except Exception:
-    QDateTime = None
-
 flask_app = Flask(__name__, template_folder='app/templates', static_folder='app/static', static_url_path='/static')
 
 VALID_ALGOS = {'FIFO', 'LRU', 'Optimal'}
 VALID_SEGMENTATION_STRATEGIES = {'first_fit', 'best_fit', 'worst_fit', 'next_fit'}
-LIVE_REFERENCE_MAXLEN = 120
-_LIVE_REFERENCE_LOCK = threading.Lock()
-_LIVE_REFERENCE_STREAM = deque([1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5], maxlen=LIVE_REFERENCE_MAXLEN)
-_LIVE_LAST_TICK = None
-_LIVE_COUNTER = 0
 
 
 def _parse_tasklist_mem_kb(mem_text):
@@ -89,13 +78,11 @@ def _build_windows_live_reference(window_size=12, max_page=9):
     """
     Generate a realistic page reference string from real Windows processes.
 
-    Each process's working set memory is divided into virtual pages.
-    Larger processes occupy more pages. The reference string simulates
-    CPU scheduling: processes take turns, and each access shows locality
-    of reference (spatial: nearby pages, temporal: re-access recent pages).
-
-    This makes the FIFO/LRU/Optimal demo genuinely reflect how a real OS
-    handles page replacement for competing processes.
+    Each process's working set memory is divided into virtual pages
+    numbered as small integers (compatible with paging algorithms).
+    Larger/more active processes occupy more pages. The reference string
+    simulates CPU scheduling: processes take turns, and each access
+    shows locality of reference (spatial and temporal).
     """
     import random
 
@@ -107,11 +94,9 @@ def _build_windows_live_reference(window_size=12, max_page=9):
         return None
 
     tick = _get_realtime_tick()
-    # Use tick as seed for reproducibility within each polling interval
     rng = random.Random(tick // 5)
 
-    # --- Step 1: Pick top processes by memory to simulate ---
-    # Group by process name to avoid flooding with duplicates
+    # --- Step 1: Group by process name to avoid flooding with duplicates ---
     grouped = {}
     for p in process_rows:
         base = p['name'].replace('.exe', '').strip()
@@ -121,42 +106,29 @@ def _build_windows_live_reference(window_size=12, max_page=9):
             grouped[base] = {
                 'name': p['name'], 'pid': p['pid'],
                 'mem_kb': 0, 'cpu': 0, 'volatility': 0, 'base_pid': p['pid'],
-                'base_addr': p['base_addr']
+                'base_addr': p.get('base_addr', 0)
             }
         grouped[base]['mem_kb'] += p['mem_kb']
         grouped[base]['cpu'] += p['cpu']
         grouped[base]['volatility'] += p['volatility']
 
     top_procs = sorted(grouped.values(), key=lambda g: g['volatility'], reverse=True)
-    # Take top 6-8 to have meaningful page competition
     top_procs = top_procs[:min(8, max(3, max_page - 1))]
     if not top_procs:
         return None
 
-    # --- Step 2: Assign virtual page ranges proportional to volatility ---
-    # The most volatile processes (highest CPU/activity) get the most pages
+    # --- Step 2: Assign integer page ranges proportional to volatility ---
     total_vol = sum(p['volatility'] for p in top_procs) or 1
-    page_assignments = {}  # process_name -> list of page numbers
+    page_assignments = {}  # process_name -> list of integer page numbers
     process_meta = []      # for UI display
+    next_page = 1          # integer page counter
 
-    # Instead of simplistic 1..max_page integers, we use hex pointers!
-    # To keep randomness bounded but realistic, each process gets a base allocation.
     for proc in top_procs:
         proportion = proc['volatility'] / total_vol
-        # Each process gets at least 1 page, proportional to activity
         num_pages = max(1, round(proportion * max_page))
-        
-        base_addr = proc.get('base_addr', 0)
-        if base_addr == 0:
-            # Fallback realistic 64-bit Virtual Allocation base via PID math
-            base_addr = 0x7FFA00000000 + (proc['base_pid'] * 0x100000)
-            
-        base_page = base_addr // 4096
-        
-        pages = []
-        for i in range(num_pages):
-            page_hex = f"0x{(base_page + i):X}"
-            pages.append(page_hex)
+
+        pages = list(range(next_page, next_page + num_pages))
+        next_page += num_pages
 
         page_assignments[proc['name']] = pages
         process_meta.append({
@@ -165,49 +137,41 @@ def _build_windows_live_reference(window_size=12, max_page=9):
             'mem_kb': proc['mem_kb'],
             'cpu': proc['cpu'],
             'pages': pages,
-            'page': pages[0] if len(pages)>0 else "0x00",  # primary page for display
+            'page': pages[0],
             'num_pages': len(pages),
             'mem_pct': round(proportion * 100, 1),
             'volatility_label': f"{proc['cpu']:.1f}s CPU" if proc['cpu'] > 0 else f"{proc['mem_kb']//1024} MB"
         })
 
     # --- Step 3: Build reference string simulating CPU scheduling + locality ---
-    # Round-robin processes, each accessing pages with locality patterns
+    all_pages = []
+    for v in page_assignments.values():
+        all_pages.extend(v)
+
     reference_string = []
     proc_list = list(page_assignments.keys())
-    recent_pages = []  # for temporal locality
+    recent_pages = []
 
     for i in range(window_size):
-        # Simulate CPU scheduling: processes with more volatility get more time slices
         weights = [grouped.get(p.replace('.exe', '').strip(), {}).get('volatility', 1)
                    for p in proc_list]
         total_w = sum(weights) or 1
         weights = [w / total_w for w in weights]
 
-        # Pick a process (weighted by volatility)
         chosen_proc = rng.choices(proc_list, weights=weights, k=1)[0]
         available_pages = page_assignments[chosen_proc]
 
-        # Locality of reference:
-        # 70% chance: spatial locality (nearby page in this process)
-        # 20% chance: temporal locality (re-access a recently used page)
-        # 10% chance: random page fault (new page)
         roll = rng.random()
 
         if roll < 0.20 and recent_pages:
             # Temporal locality: revisit a recent page
             page = rng.choice(recent_pages[-4:])
         elif roll < 0.90 and len(available_pages) > 1:
-            # Spatial locality: sequential or nearby page in this process
+            # Spatial locality: nearby page in this process
             page = rng.choice(available_pages)
         else:
-            # Random access: potential page fault (new page nearby, or just random)
-            if available_pages:
-                # We offset an existing page slightly to create a true cache miss
-                base_page = int(rng.choice(available_pages), 16)
-                page = f"0x{(base_page + rng.randint(-5, 5)):X}"
-            else:
-                page = f"0x{rng.randint(0x7FFA00000, 0x7FFA10000):X}"
+            # Random access: pick any page from any process (cache miss)
+            page = rng.choice(all_pages)
 
         reference_string.append(page)
         recent_pages.append(page)
@@ -230,7 +194,7 @@ def _size_from_process_mem(mem_kb):
 
 def _build_windows_segmentation_operations(process_rows, live_tick):
     if not process_rows:
-        return _build_live_segmentation_operations(live_tick)
+        return []
 
     ops = []
     top = process_rows[:5]
@@ -255,23 +219,10 @@ def _build_windows_segmentation_operations(process_rows, live_tick):
 
 
 def _get_realtime_date_payload():
-    if QDateTime is not None:
-        now = QDateTime.currentDateTime()
-        hour = now.time().hour()
-        return {
-            'source': 'pyqt',
-            'iso': now.toString('yyyy-MM-ddTHH:mm:ss'),
-            'display': now.toString('ddd, dd MMM yyyy HH:mm:ss'),
-            'hour': hour,
-            'theme': 'day' if 6 <= hour < 18 else 'night'
-        }
-
-    # Safe fallback if PyQt is not available at runtime.
-    from datetime import datetime
     now = datetime.now()
     hour = now.hour
     return {
-        'source': 'fallback',
+        'source': 'system',
         'iso': now.isoformat(timespec='seconds'),
         'display': now.strftime('%a, %d %b %Y %H:%M:%S'),
         'hour': hour,
@@ -280,10 +231,6 @@ def _get_realtime_date_payload():
 
 
 def _get_realtime_tick():
-    if QDateTime is not None:
-        return int(QDateTime.currentDateTime().toSecsSinceEpoch())
-
-    from datetime import datetime
     return int(datetime.now().timestamp())
 
 
@@ -291,52 +238,7 @@ def _is_truthy(value):
     return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
-def _next_live_reference(window_size=12, max_page=9):
-    global _LIVE_LAST_TICK, _LIVE_COUNTER
 
-    window_size = max(4, int(window_size))
-    max_page = max(2, int(max_page))
-    tick = _get_realtime_tick()
-
-    with _LIVE_REFERENCE_LOCK:
-        if _LIVE_LAST_TICK is None:
-            _LIVE_LAST_TICK = tick - 1
-
-        step_count = tick - _LIVE_LAST_TICK
-        if step_count <= 0:
-            step_count = 1
-        step_count = min(step_count, 8)
-
-        for _ in range(step_count):
-            _LIVE_LAST_TICK += 1
-            _LIVE_COUNTER += 1
-
-            # Alternate between locality bursts and jumps to keep the stream realistic.
-            if len(_LIVE_REFERENCE_STREAM) > 2 and (_LIVE_COUNTER % 4 in (0, 1)):
-                next_page = _LIVE_REFERENCE_STREAM[-2]
-            else:
-                next_page = ((_LIVE_LAST_TICK * 7) + (_LIVE_COUNTER * 3)) % max_page + 1
-
-            _LIVE_REFERENCE_STREAM.append(next_page)
-
-        return list(_LIVE_REFERENCE_STREAM)[-window_size:], _LIVE_LAST_TICK
-
-
-def _build_live_segmentation_operations(live_tick):
-    # Keep a safe, deterministic operation chain but vary sizes over time.
-    v1 = 128 + ((live_tick % 5) * 32)
-    v2 = 192 + (((live_tick // 2) % 5) * 32)
-    v3 = 96 + (((live_tick // 3) % 4) * 32)
-    v4 = 64 + (((live_tick // 4) % 6) * 16)
-
-    return [
-        {'action': 'alloc', 'name': 'A', 'size': v1},
-        {'action': 'alloc', 'name': 'B', 'size': v2},
-        {'action': 'free', 'name': 'A'},
-        {'action': 'alloc', 'name': 'C', 'size': v3},
-        {'action': 'compact'},
-        {'action': 'alloc', 'name': 'D', 'size': v4}
-    ]
 
 
 def _normalize_reference_string(raw_reference):
@@ -344,11 +246,16 @@ def _normalize_reference_string(raw_reference):
         tokens = raw_reference.replace(',', ' ').split()
         if not tokens:
             raise ValueError('reference_string must contain at least one page number')
-        reference = [int(token) for token in tokens]
+        reference = [int(token, 0) if token.startswith('0x') or token.startswith('0X') else int(token) for token in tokens]
     elif isinstance(raw_reference, list):
         if not raw_reference:
             raise ValueError('reference_string must contain at least one page number')
-        reference = [int(x) for x in raw_reference]
+        reference = []
+        for x in raw_reference:
+            if isinstance(x, str) and (x.startswith('0x') or x.startswith('0X')):
+                reference.append(int(x, 16))
+            else:
+                reference.append(int(x))
     else:
         raise ValueError('reference_string must be a list or a comma-separated string')
 
@@ -427,42 +334,23 @@ def realtime_algorithms_api():
         windows_process_count = 0
 
         if live_mode:
-            if live_source not in ['windows', 'dummy']:
-                raise ValueError('Only live_source=windows or dummy is supported in live mode')
+            if live_source != 'windows':
+                raise ValueError('Only live_source=windows is supported in live mode')
 
-            windows_live = None
-            if live_source == 'windows':
-                try:
-                    windows_live = _build_windows_live_reference(
-                        window_size=request.args.get('window_size', 12),
-                        max_page=request.args.get('max_page', 9)
-                    )
-                except Exception as e:
-                    print(f"Warning: Windows telemetry failed: {e}. Falling back to dummy.")
+            windows_live = _build_windows_live_reference(
+                window_size=request.args.get('window_size', 12),
+                max_page=request.args.get('max_page', 9)
+            )
 
-            if windows_live:
-                ref_string = windows_live['reference_string']
-                live_tick = windows_live['tick']
-                windows_process_rows = windows_live['process_rows']
-                windows_process_window = windows_live['process_window']
-                windows_process_count = windows_live['process_count']
-                live_source_used = 'windows'
-            else:
-                # Fallback to dummy data
-                import time
-                seq = [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]
-                t = int(time.time() * 2)
-                ref_string = [seq[(t + i) % len(seq)] for i in range(12)]
-                live_tick = t
-                windows_process_rows = [{'pid': 1, 'name': 'dummy.exe', 'mem_kb': 1024, 'cpu': 10.0, 'volatility': 10.0}]
-                dummy_proc = {
-                    'name': 'dummy', 'pid': 1, 'pages': [1,2,3,4,5,6,7,8,9,10,11,12], 
-                    'page': 1, 'num_pages': 12, 'mem_pct': 100.0, 'cpu': 10.0, 
-                    'volatility_label': '10.0s CPU', 'mem_kb': 1024
-                }
-                windows_process_window = [dummy_proc for _ in range(12)]
-                windows_process_count = 1
-                live_source_used = 'dummy'
+            if not windows_live:
+                raise ValueError('Could not retrieve Windows process data. Live mode requires Windows OS with running processes.')
+
+            ref_string = windows_live['reference_string']
+            live_tick = windows_live['tick']
+            windows_process_rows = windows_live['process_rows']
+            windows_process_window = windows_live['process_window']
+            windows_process_count = windows_live['process_count']
+            live_source_used = 'windows'
         else:
             ref_string = _normalize_reference_string(
                 request.args.get('reference_string', '7,0,1,2,0,3,0,4,2,3,0,3,2')
@@ -500,13 +388,10 @@ def realtime_algorithms_api():
             if operations_json:
                 operations = json.loads(operations_json)
             else:
-                if live_source_used == 'windows':
-                    operations = _build_windows_segmentation_operations(
-                        windows_process_rows,
-                        live_tick or _get_realtime_tick()
-                    )
-                else:
-                    operations = _build_live_segmentation_operations(live_tick or _get_realtime_tick())
+                operations = _build_windows_segmentation_operations(
+                    windows_process_rows,
+                    live_tick or _get_realtime_tick()
+                )
 
             if not isinstance(operations, list):
                 raise ValueError('Operations must be a list')
@@ -627,18 +512,10 @@ def live_segmentation_api():
         extra_ops_raw = request.args.get('extra_ops', None)
 
         # --- Fetch real Windows processes ---
-        raw = []
-        try:
-            raw = _get_windows_process_snapshot(limit=96)
-        except Exception as e:
-            print(f"Warning: Windows process snapshot failed: {e}. Using dummy processes.")
+        raw = _get_windows_process_snapshot(limit=96)
 
         if not raw:
-            raw = [
-                {'name': 'dummy_proc_A', 'mem_kb': 2048, 'pid': 100, 'cpu': 10.0, 'volatility': 10.0},
-                {'name': 'dummy_proc_B', 'mem_kb': 1024, 'pid': 101, 'cpu': 5.0, 'volatility': 5.0},
-                {'name': 'dummy_proc_C', 'mem_kb': 4096, 'pid': 102, 'cpu': 2.0, 'volatility': 2.0}
-            ]
+            raise ValueError('Could not retrieve Windows process data. Live segmentation requires Windows OS with running processes.')
 
         # Group by base process name and aggregate memory
         groups = {}
