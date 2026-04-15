@@ -73,7 +73,7 @@ virtual-memory-optimizer/
 │   └── test_segmentation.py      (DONE ✓)
 │
 ├── requirements.txt
-├── insane.txt                    ← This file
+├── docs/notes/insane.txt         ← This file
 └── README.md                     (DONE ✓ via PR #5)
 
 ================================================================================
