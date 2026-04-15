@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Optimal Algorithm â€” Virtual Memory Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--bg2:#111;--bg3:#161616;--bg4:#1c1c1c;
+  --b:#252525;--b2:#333;--b3:#444;
+  --t:#f0f0f0;--t2:#777;--t3:#444;--t4:#2a2a2a;
+  --white:#f0f0f0;
+}
+body{background:var(--bg);color:var(--t);font-family:'Geist Mono','Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh}
+
+/* Nav */
+nav{padding:16px 40px;border-bottom:1px solid var(--b);display:flex;gap:6px;align-items:center}
+nav a{color:var(--t2);text-decoration:none;font-size:11px;padding:6px 14px;border-radius:3px;letter-spacing:.05em;text-transform:uppercase;transition:all .15s}
+nav a:hover{color:var(--t)}
+nav a.active{color:var(--t);background:var(--bg3);border:1px solid var(--b)}
+nav .sep{color:var(--t4);margin:0 2px}
+
+.app{max-width:1120px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:14px}
+
+/* Header */
+.hdr{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--b)}
+.hdr h1{font-size:14px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.hdr-sub{font-size:10px;color:var(--t3);letter-spacing:.06em}
+.algo-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:3px;font-size:10px;color:var(--white);text-transform:uppercase;letter-spacing:.1em}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:livePulse 2s ease-in-out infinite;display:inline-block}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 6px #4ade80}50%{opacity:.3;box-shadow:none}}
+.proc-src{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.proc-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--bg);border:1px solid var(--b2);border-radius:2px;font-size:10px;color:var(--t2);letter-spacing:.04em}
+.proc-chip .pc-mem{color:var(--t3);font-size:9px}
+.psrc-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+
+/* Panel */
+.pnl{background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:16px}
+.sec{font-size:9px;color:var(--t2);letter-spacing:.12em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--b);margin-bottom:14px}
+
+/* Controls */
+.ctrl-row{display:flex;gap:16px;align-items:end;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.grow{flex:1;min-width:200px}
+.lbl{font-size:9px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase}
+input[type=text]{background:var(--bg);border:1px solid var(--b2);color:var(--t);padding:8px 10px;font-family:inherit;font-size:13px;border-radius:2px;outline:none;width:100%}
+input[type=text]:focus{border-color:var(--b3)}
+.frame-row{display:flex;gap:8px;align-items:center}
+.frame-row input[type=range]{flex:1;accent-color:var(--white);width:120px}
+.frame-num{font-size:18px;font-weight:600;min-width:20px;text-align:right}
+button{padding:7px 14px;font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;border:none}
+.bp{background:var(--white);color:#0a0a0a}
+.bp:hover{opacity:.85}
+.bs{background:transparent;color:var(--t);border:1px solid var(--b2)}
+.bs:hover:not(:disabled){border-color:var(--b3)}
+.bd{background:transparent;color:var(--t2);border:1px solid var(--b)}
+.bd:hover:not(:disabled){border-color:var(--b3);color:var(--t)}
+button:disabled{opacity:.28;cursor:not-allowed}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.spd-row{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--t2)}
+.spd-row input{accent-color:var(--white);width:80px}
+
+/* Empty */
+.empty{text-align:center;padding:28px 0;color:var(--t3);font-size:11px}
+
+/* Step info */
+.step-info{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.sstat{display:flex;flex-direction:column;gap:1px}
+.sstat-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em}
+.sstat-val{font-size:20px;font-weight:600}
+.fpill{display:inline-flex;align-items:center;padding:4px 11px;border-radius:2px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border:1px solid}
+.fpill.is-fault{border-color:var(--white);color:var(--white);background:rgba(255,255,255,.05)}
+.fpill.is-hit{border-color:var(--t4);color:var(--t2)}
+
+/* Frame boxes */
+.frames-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.fbox{width:58px;height:58px;border:1px solid var(--b2);border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;background:var(--bg);transition:background .25s,border-color .25s}
+.fbox.loaded{background:var(--white);color:#0a0a0a;border-color:var(--white)}
+.fbox.empty{background:var(--bg);border-color:var(--b)}
+.fbox.newly{animation:fload .45s ease-out}
+@keyframes fload{0%{box-shadow:0 0 0 0 rgba(255,255,255,.65);transform:scale(1.06)}100%{box-shadow:0 0 0 8px rgba(255,255,255,0);transform:scale(1)}}
+.fidx{position:absolute;top:4px;left:5px;font-size:9px;color:var(--t3);letter-spacing:.04em}
+.fbox.loaded .fidx{color:#888}
+.fpage{font-size:21px;font-weight:600}
+.fbox.empty .fpage{color:var(--t4)}
+
+/* Progress */
+.prog{height:2px;background:var(--b);margin:10px 0 14px;border-radius:1px;overflow:hidden}
+.prog-fill{height:100%;background:var(--white);border-radius:1px;transition:width .3s ease}
+
+/* Ref pills */
+.ref-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+.ref-pills{display:flex;gap:3px;flex-wrap:wrap}
+.rpill{width:25px;height:25px;display:flex;align-items:center;justify-content:center;font-size:10px;border:1px solid transparent;border-radius:2px;cursor:pointer;transition:all .12s;color:var(--t3);background:var(--bg3);user-select:none}
+.rpill:hover{border-color:var(--b2);color:var(--t2)}
+.rpill.cur{border-color:var(--white);color:var(--white);background:rgba(255,255,255,.07)}
+.rpill.fpast{color:#aaa;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.15)}
+.rpill.hpast{color:var(--t3)}
+.rpill.fut{opacity:.3}
+
+/* History */
+.hist-wrap{overflow-x:auto}
+.hist-wrap table{border-collapse:separate;border-spacing:2px;white-space:nowrap}
+.hist-wrap th{width:26px;height:20px;font-size:9px;font-weight:400;color:var(--t3);text-align:center;padding:0}
+.hist-wrap td{width:26px;height:23px;font-size:10px;text-align:center;border-radius:2px;padding:0;transition:background .2s}
+.rl{font-size:9px!important;color:var(--t2)!important;text-align:left!important;padding:0 8px 0 0!important;width:auto!important;white-space:nowrap;background:transparent!important;min-width:58px}
+.cf{background:var(--white);color:#0a0a0a;font-weight:600}
+.ch{background:var(--bg3);color:#555}
+.cn{background:var(--white);color:#0a0a0a;font-weight:600}
+.ck{background:var(--bg3);color:#444}
+.ce{background:var(--bg);color:var(--t4)}
+.cv{background:var(--bg3);color:var(--t3);text-decoration:line-through}
+.cnd{background:transparent;color:var(--t3)}
+.cfy{background:transparent;color:var(--white);font-weight:600}
+.cfn{background:transparent;color:var(--t3)}
+.ccol{outline:1px solid rgba(255,255,255,.28);outline-offset:-1px}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sc{background:var(--bg3);border-radius:3px;padding:12px 14px;text-align:center}
+.sc-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+.sc-val{font-size:26px;font-weight:600}
+.sv-algo{color:#aaa;font-size:13px!important;letter-spacing:.05em}
+.sv-f{color:var(--white)}
+.sv-h{color:#555}
+.sv-r{color:#888}
+
+/* Charts */
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.chart-title{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.1em}
+.chart-wrap{position:relative;height:200px}
+.anomaly-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.2);border-radius:2px;font-size:9px;color:var(--white);text-transform:uppercase;letter-spacing:.08em}
+.anim-dot{width:5px;height:5px;background:var(--white);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* Description */
+.algo-desc{background:var(--bg3);border-radius:3px;padding:16px 20px;font-size:12px;line-height:1.7;color:var(--t2);border-left:3px solid var(--b2)}
+.algo-desc strong{color:var(--t)}
+.algo-desc code{background:var(--bg);padding:2px 6px;border-radius:2px;font-size:11px;color:var(--t)}
+
+@media(max-width:720px){
+  .ctrl-row{flex-direction:column}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/">Overview</a>
+  <span class="sep">|</span>
+  <a href="/fifo">FIFO</a>
+  <a href="/lru">LRU</a>
+  <a href="/optimal" class="active">Optimal</a>
+  <span class="sep">|</span>
+  <a href="/segmentation">Segmentation</a>
+</nav>
+
+<div class="app">
+
+  <div class="hdr">
+    <h1>Optimal &mdash; Furthest Future Use</h1>
+    <span class="algo-badge"><span class="live-dot"></span> Live Windows Processes</span>
+  </div>
+
+  <!-- Algorithm Description -->
+  <div class="algo-desc">
+    <strong>How Optimal works:</strong> This is the <strong>theoretical best</strong> algorithm. On each page fault, it looks <em>ahead</em> in the reference string and evicts the page whose next use is <strong>farthest in the future</strong> (or never used again). It produces the <strong>minimum possible faults</strong> for any given reference string. It is not implementable in practice (requires future knowledge) but serves as the gold standard benchmark.
+    <br><br>
+    <strong>Live Process Connection:</strong> The reference string comes from <strong>real Windows processes</strong>, dynamically driven by the <strong>most volatile metric (CPU time)</strong>. Compare Optimal's fault count against FIFO and LRU on this live workload &mdash; the gap reveals how much room each algorithm has for improvement. By weighting references by active CPU execution (simulating real thrashing and page fault probability), you'll see LRU typically closely trails Optimal's performance, while FIFO struggles.
+  </div>
+
+  <!-- Controls -->
+  <div class="pnl">
+    <div class="ctrl-row">
+      <div class="field grow">
+        <span class="lbl">Reference String &mdash; comma or space separated</span>
+        <input type="text" id="refIn" value="1,2,3,4,1,2,5,1,2,3,4,5" placeholder="e.g. 1,2,3,4,1,2,5,1,2,3,4,5">
+      </div>
+      <div class="field">
+        <span class="lbl">Frames &mdash; <span id="fcDisp">3</span></span>
+        <div class="frame-row">
+          <input type="range" id="fcSlider" min="1" max="10" value="3">
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl">Playback</span>
+        <div class="btn-row">
+          <button class="bp" onclick="runSim()">&#9654; Run</button>
+          <button class="bs" id="stepBtn" onclick="stepFwd()" disabled>&#8594; Step</button>
+          <button class="bs" id="autoBtn" onclick="toggleAuto()" disabled>&#9646;&#9646; Auto</button>
+          <button class="bd" onclick="resetSim()">&#10227; Reset</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl">Speed</span>
+        <div class="spd-row">
+          <span>slow</span>
+          <input type="range" id="spdSlider" min="1" max="10" value="5">
+          <span>fast</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Process Source -->
+  <div class="pnl" id="procSrcPanel" style="display:none">
+    <div class="sec">Live Process Source</div>
+    <div class="psrc-label">Reference string generated from these real Windows processes:</div>
+    <div class="proc-src" id="procSrcChips"></div>
+  </div>
+
+  <!-- Step Visualization -->
+  <div class="pnl">
+    <div class="sec">Step-by-step Visualization</div>
+    <div id="stepEmpty" class="empty">Run simulation to begin step-by-step playback</div>
+    <div id="stepContent" style="display:none">
+      <div class="step-info" id="stepInfoRow">
+        <div class="sstat"><span class="sstat-lbl">Step</span><span class="sstat-val" id="sNum">&mdash;</span></div>
+        <div class="sstat"><span class="sstat-lbl">Page</span><span class="sstat-val" id="sPage">&mdash;</span></div>
+        <span class="fpill" id="fPill">&mdash;</span>
+        <div class="sstat" id="evStat" style="display:none"><span class="sstat-lbl">Evicted</span><span class="sstat-val" id="sEvict" style="color:var(--t2)">&mdash;</span></div>
+        <div style="flex:1"></div>
+        <div class="sstat" style="text-align:right"><span class="sstat-lbl">Faults so far</span><span class="sstat-val" id="sFaultsSoFar" style="color:var(--white)">&mdash;</span></div>
+      </div>
+      <div class="frames-row" id="framesRow"></div>
+      <div class="prog"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+      <div class="ref-lbl">Reference String &mdash; click any step to jump</div>
+      <div class="ref-pills" id="refPills"></div>
+    </div>
+  </div>
+
+  <!-- History Table -->
+  <div class="pnl">
+    <div class="sec">Frame State History</div>
+    <div id="histEmpty" class="empty" style="padding:14px 0">Run simulation to see full step history</div>
+    <div id="histContent" style="display:none">
+      <div class="hist-wrap" id="histTable"></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="pnl">
+    <div class="sec">Statistics</div>
+    <div class="stats-row">
+      <div class="sc"><div class="sc-lbl">Algorithm</div><div class="sc-val sv-algo" id="stAlgo">&mdash;</div></div>
+      <div class="sc"><div class="sc-lbl">Page Faults</div><div class="sc-val sv-f" id="stF">&mdash;</div></div>
+      <div class="sc"><div class="sc-lbl">Page Hits</div><div class="sc-val sv-h" id="stH">&mdash;</div></div>
+      <div class="sc"><div class="sc-lbl">Fault Rate</div><div class="sc-val sv-r" id="stR">&mdash;</div></div>
+    </div>
+  </div>
+
+  <!-- Faults vs Frames Chart (benchmark comparison) -->
+  <div class="pnl">
+    <div class="chart-hdr">
+      <span class="chart-title">FIFO Faults vs Frame Count (frames 1&ndash;10) &mdash; Optimal never has anomaly</span>
+      <span id="anomalyBadge" style="display:none" class="anomaly-badge"><span class="anim-dot"></span>Anomaly Detected</span>
+    </div>
+    <div id="beladyEmpty" class="empty" style="padding:16px 0;font-size:11px">Run simulation to see fault vs frame analysis</div>
+    <div class="chart-wrap" id="beladyWrap" style="display:none"><canvas id="beladyChart"></canvas></div>
+  </div>
+
+  <!-- Fault Timeline Chart -->
+  <div class="pnl">
+    <div class="chart-hdr">
+      <span class="chart-title">Cumulative Fault Timeline</span>
+    </div>
+    <div id="timelineEmpty" class="empty" style="padding:16px 0;font-size:11px">Run simulation to see fault progression</div>
+    <div class="chart-wrap" id="timelineWrap" style="display:none"><canvas id="timelineChart"></canvas></div>
+  </div>
+
+</div>
+
+<script>
+var ALGO = 'Optimal';
+var result = null, curStep = -1, autoInt = null;
+var allResults = null;
+var cBelady = null, cTimeline = null;
+var runTimer = null;
+var realtimeRunInt = null;
+
+function $(id) { return document.getElementById(id); }
+function show(id) { $(id).style.display = ''; }
+function hide(id) { $(id).style.display = 'none'; }
+
+function parseRef() {
+  return $('refIn').value.trim().split(/[\s,]+/).map(Number).filter(function(n) { return !isNaN(n) && n > 0; });
+}
+function getFC() { return parseInt($('fcSlider').value); }
+function scheduleRun() {
+  if (runTimer) clearTimeout(runTimer);
+  runTimer = setTimeout(function() { runSim(); }, 350);
+}
+function getSpd() {
+  var s = parseInt($('spdSlider').value);
+  return Math.round(2200 - (s - 1) * (2100 / 9));
+}
+
+function updateBtns() {
+  var ok = result !== null;
+  var total = ok ? result.steps.length : 0;
+  var s = curStep;
+  $('stepBtn').disabled = !ok || s >= total - 1;
+  $('autoBtn').disabled = !ok;
+  $('autoBtn').textContent = autoInt ? '\u23F8 Pause' : '\u25B6 Auto';
+}
+
+function renderStep(si) {
+  if (!result) return;
+  var steps = result.steps;
+  var frame_count = result.frame_count;
+  var s = steps[si];
+  var total = steps.length;
+
+  $('sNum').textContent = (si + 1) + '/' + total;
+  $('sPage').textContent = s.page;
+
+  var pill = $('fPill');
+  if (s.fault) {
+    pill.className = 'fpill is-fault';
+    pill.textContent = '\u25C6 FAULT';
+  } else {
+    pill.className = 'fpill is-hit';
+    pill.textContent = '\u00B7 HIT';
+  }
+
+  var evStat = $('evStat');
+  if (s.evicted !== null && s.evicted !== undefined) {
+    evStat.style.display = '';
+    $('sEvict').textContent = s.evicted;
+  } else {
+    evStat.style.display = 'none';
+  }
+
+  var faultsSoFar = 0;
+  for (var k = 0; k <= si; k++) { if (steps[k].fault) faultsSoFar++; }
+  $('sFaultsSoFar').textContent = faultsSoFar;
+
+  var fr = $('framesRow');
+  var prev = si > 0 ? steps[si - 1] : null;
+  fr.innerHTML = '';
+  for (var f = 0; f < frame_count; f++) {
+    var page = s.frames[f];
+    var prevPage = prev ? prev.frames[f] : null;
+    var isNew = s.fault && page === s.page && page !== prevPage;
+    var isEmpty = page === null;
+    var box = document.createElement('div');
+    box.className = 'fbox' + (isEmpty ? ' empty' : ' loaded') + (isNew ? ' newly' : '');
+    box.innerHTML = '<span class="fidx">F' + f + '</span><span class="fpage">' + (isEmpty ? '\u2014' : page) + '</span>';
+    fr.appendChild(box);
+  }
+
+  $('progFill').style.width = (((si + 1) / total) * 100) + '%';
+
+  var rp = $('refPills');
+  rp.innerHTML = '';
+  for (var i = 0; i < steps.length; i++) {
+    var st = steps[i];
+    var p = document.createElement('div');
+    var cls = 'rpill';
+    if (i === si) cls += ' cur';
+    else if (i < si) cls += st.fault ? ' fpast' : ' hpast';
+    else cls += ' fut';
+    p.className = cls;
+    p.textContent = st.page;
+    p.title = 'Step ' + (i+1) + ': Page ' + st.page + ' \u2014 ' + (st.fault ? 'FAULT' : 'HIT');
+    (function(idx) { p.onclick = function() { curStep = idx; renderStep(idx); updateBtns(); }; })(i);
+    rp.appendChild(p);
+  }
+
+  document.querySelectorAll('.ccol').forEach(function(el) { el.classList.remove('ccol'); });
+  var colCells = document.querySelectorAll('.c' + si);
+  for (var c = 0; c < colCells.length; c++) { colCells[c].classList.add('ccol'); }
+
+  var nf = 0, nh = 0;
+  for (var j = 0; j <= si; j++) { if (steps[j].fault) nf++; else nh++; }
+  $('stAlgo').textContent = result.algorithm;
+  $('stF').textContent = nf;
+  $('stH').textContent = nh;
+  $('stR').textContent = Math.round(nf / (si + 1) * 100) + '%';
+}
+
+function renderHistory() {
+  if (!result) return;
+  var steps = result.steps;
+  var frame_count = result.frame_count;
+  var h = '<table>';
+
+  h += '<tr><td class="rl">&mdash;</td>';
+  for (var i = 0; i < steps.length; i++) { h += '<th>' + (i + 1) + '</th>'; }
+  h += '</tr>';
+
+  h += '<tr><td class="rl">Page</td>';
+  for (var i = 0; i < steps.length; i++) {
+    h += '<td class="' + (steps[i].fault ? 'cf' : 'ch') + ' c' + i + '">' + steps[i].page + '</td>';
+  }
+  h += '</tr>';
+
+  for (var f = 0; f < frame_count; f++) {
+    h += '<tr><td class="rl">Frame ' + f + '</td>';
+    for (var i = 0; i < steps.length; i++) {
+      var page = steps[i].frames[f];
+      if (page === null) h += '<td class="ce c' + i + '">&mdash;</td>';
+      else if (steps[i].fault && page === steps[i].page) h += '<td class="cn c' + i + '">' + page + '</td>';
+      else h += '<td class="ck c' + i + '">' + page + '</td>';
+    }
+    h += '</tr>';
+  }
+
+  h += '<tr><td class="rl">Evicted</td>';
+  for (var i = 0; i < steps.length; i++) {
+    if (steps[i].evicted !== null && steps[i].evicted !== undefined)
+      h += '<td class="cv c' + i + '">' + steps[i].evicted + '</td>';
+    else
+      h += '<td class="cnd c' + i + '">&middot;</td>';
+  }
+  h += '</tr>';
+
+  h += '<tr><td class="rl">Fault?</td>';
+  for (var i = 0; i < steps.length; i++) {
+    h += '<td class="' + (steps[i].fault ? 'cfy' : 'cfn') + ' c' + i + '">' + (steps[i].fault ? 'F' : '\u00B7') + '</td>';
+  }
+  h += '</tr></table>';
+  $('histTable').innerHTML = h;
+}
+
+var CHART_FONT = "'Geist Mono','Courier New',monospace";
+var CHART_AXIS = {
+  ticks: { color:'#555', font:{family:CHART_FONT, size:10} },
+  grid: { color:'rgba(255,255,255,.04)' },
+  border: { color:'#2a2a2a' }
+};
+
+function renderCharts() {
+  if (!allResults) return;
+
+  if (cBelady) { cBelady.destroy(); cBelady = null; }
+  if (cTimeline) { cTimeline.destroy(); cTimeline = null; }
+
+  // Belady's anomaly chart
+  var bel = allResults.belady;
+  var anomalyFs = {};
+  for (var a = 0; a < bel.anomaly_at.length; a++) { anomalyFs[bel.anomaly_at[a][1]] = true; }
+  $('anomalyBadge').style.display = bel.anomaly_found ? '' : 'none';
+  hide('beladyEmpty'); show('beladyWrap');
+
+  var fLabels = Object.keys(bel.fault_counts).map(Number);
+  var fData = [];
+  var ptColors = [];
+  var ptSizes = [];
+  for (var i = 0; i < fLabels.length; i++) {
+    fData.push(bel.fault_counts[fLabels[i]]);
+    ptColors.push(anomalyFs[fLabels[i]] ? '#ff5555' : '#f0f0f0');
+    ptSizes.push(anomalyFs[fLabels[i]] ? 7 : 3);
+  }
+
+  cBelady = new Chart($('beladyChart'), {
+    type:'line',
+    data:{
+      labels:fLabels,
+      datasets:[{
+        label:'Faults', data:fData,
+        borderColor:'#f0f0f0',
+        backgroundColor:'rgba(240,240,240,.04)',
+        pointBackgroundColor:ptColors,
+        pointBorderColor:ptColors,
+        pointRadius:ptSizes,
+        tension:.2, borderWidth:1.5, fill:true
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Frames',color:'#555',font:{family:CHART_FONT,size:9}}}),
+        y:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Faults',color:'#555',font:{family:CHART_FONT,size:9}}})
+      }
+    }
+  });
+
+  // Fault timeline chart
+  hide('timelineEmpty'); show('timelineWrap');
+  var cumData = [];
+  var c = 0;
+  for (var i = 0; i < result.steps.length; i++) {
+    if (result.steps[i].fault) c++;
+    cumData.push(c);
+  }
+  var stepLbls = [];
+  for (var i = 0; i < result.steps.length; i++) { stepLbls.push(i + 1); }
+
+  cTimeline = new Chart($('timelineChart'), {
+    type:'line',
+    data:{
+      labels:stepLbls,
+      datasets:[{
+        label:'Cumulative Faults', data:cumData,
+        borderColor:'#f0f0f0',
+        backgroundColor:'rgba(240,240,240,.06)',
+        pointRadius:3,
+        pointBackgroundColor:'#f0f0f0',
+        tension:0, borderWidth:1.5, fill:true
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Step',color:'#555',font:{family:CHART_FONT,size:9}}}),
+        y:Object.assign({}, CHART_AXIS, {title:{display:true,text:'Cumulative Faults',color:'#555',font:{family:CHART_FONT,size:9}}})
+      }
+    }
+  });
+}
+
+function runSim() {
+  stopAuto();
+  requestRealtimeRun({ showLoading: true, silent: false, force: true, resetStep: true });
+}
+
+function applyRealtimeRunPayload(payload, resetStep) {
+  if (!payload || !payload.paging || !payload.paging.current) return;
+
+  allResults = payload.paging;
+  result = payload.paging.current;
+  if (!result.steps || result.steps.length === 0) return;
+
+  if (resetStep || curStep < 0) curStep = 0;
+  else curStep = Math.min(curStep, result.steps.length - 1);
+
+  hide('stepEmpty'); show('stepContent');
+  hide('histEmpty'); show('histContent');
+  renderHistory();
+  renderStep(curStep);
+  renderCharts();
+  updateBtns();
+}
+
+function requestRealtimeRun(opts) {
+  opts = opts || {};
+  if (autoInt && !opts.force) return;
+
+  var fc = getFC();
+  var runBtn = document.querySelector('.bp');
+  if (opts.showLoading && runBtn) {
+    runBtn.innerHTML = '&#8987; Loading...';
+    runBtn.disabled = true;
+  }
+
+  var isManual = $('refIn').getAttribute('data-manual') === '1';
+  var query =
+    'frames=' + encodeURIComponent(fc) +
+    '&algorithm=' + encodeURIComponent(ALGO) +
+    '&max_belady_frames=10';
+
+  if (!isManual) {
+    query += '&live=1&live_source=windows&window_size=12&max_page=9';
+  } else {
+    query += '&reference_string=' + encodeURIComponent($('refIn').value);
+  }
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/realtime-algorithms?' + query, true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      if (opts.showLoading && runBtn) {
+        runBtn.innerHTML = '&#9654; Run';
+        runBtn.disabled = false;
+      }
+
+      if (xhr.status === 200) {
+        var payload = JSON.parse(xhr.responseText);
+        if (payload.timestamp) applyRealtimeDateUI(payload.timestamp);
+        if (payload.paging && payload.paging.meta && payload.paging.meta.reference_string) {
+          $('refIn').value = payload.paging.meta.reference_string.join(',');
+          if (payload.paging.meta.processes && payload.paging.meta.processes.length) {
+            $('refIn').title = payload.paging.meta.processes
+              .map(function(p) { return p.name + ' (' + p.pid + ')'; })
+              .join(' | ');
+            renderProcessSource(payload.paging.meta.processes);
+          }
+        }
+        applyRealtimeRunPayload(payload, !!opts.resetStep);
+      } else if (!opts.silent) {
+        alert('Error: ' + xhr.responseText);
+      }
+    }
+  };
+  xhr.send();
+}
+
+function startRealtimeRunPolling() {
+  if (realtimeRunInt) clearInterval(realtimeRunInt);
+  realtimeRunInt = setInterval(function() {
+    if (!autoInt) {
+      requestRealtimeRun({ silent: true, resetStep: false });
+    }
+  }, 10000);
+}
+
+function stepFwd() {
+  if (!result || curStep >= result.steps.length - 1) return;
+  curStep++;
+  renderStep(curStep);
+  updateBtns();
+}
+
+function toggleAuto() { autoInt ? stopAuto() : startAuto(); }
+function startAuto() {
+  if (!result) return;
+  autoInt = setInterval(function() {
+    if (curStep >= result.steps.length - 1) { stopAuto(); return; }
+    stepFwd();
+  }, getSpd());
+  updateBtns();
+}
+function stopAuto() {
+  if (autoInt) { clearInterval(autoInt); autoInt = null; }
+  updateBtns();
+}
+
+function resetSim() {
+  stopAuto();
+  result = null; allResults = null; curStep = -1;
+  show('stepEmpty');  hide('stepContent');
+  show('histEmpty');  hide('histContent');
+  show('beladyEmpty'); hide('beladyWrap');
+  show('timelineEmpty'); hide('timelineWrap');
+  $('anomalyBadge').style.display = 'none';
+  ['stAlgo','stF','stH','stR'].forEach(function(id) { $(id).textContent = '\u2014'; });
+  if (cBelady) { cBelady.destroy(); cBelady = null; }
+  if (cTimeline) { cTimeline.destroy(); cTimeline = null; }
+  updateBtns();
+  hide('procSrcPanel');
+}
+
+$('fcSlider').addEventListener('input', function() { $('fcDisp').textContent = this.value; });
+$('refIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') runSim(); });
+$('fcSlider').addEventListener('change', scheduleRun);
+
+$('refIn').addEventListener('input', function() {
+  $('refIn').setAttribute('data-manual', '1');
+  if (realtimeRunInt) { clearInterval(realtimeRunInt); realtimeRunInt = null; }
+  var dot = document.querySelector('.live-dot');
+  if (dot) dot.style.display = 'none';
+  scheduleRun();
+});
+
+function applyRealtimeDateUI(payload) {
+  var nav = document.querySelector('nav');
+  if (!nav || !payload) return;
+
+  var badge = document.getElementById('realtimeDateBadge');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.id = 'realtimeDateBadge';
+    badge.style.marginLeft = 'auto';
+    badge.style.fontSize = '10px';
+    badge.style.letterSpacing = '.06em';
+    badge.style.textTransform = 'uppercase';
+    badge.style.padding = '4px 10px';
+    badge.style.border = '1px solid var(--b2)';
+    badge.style.borderRadius = '3px';
+    badge.style.color = 'var(--t2)';
+    nav.appendChild(badge);
+  }
+
+  badge.textContent = 'Live ' + payload.display;
+
+  if (payload.theme === 'day') {
+    document.documentElement.style.setProperty('--b3', '#5a5a5a');
+    document.documentElement.style.setProperty('--bg2', '#141414');
+  } else {
+    document.documentElement.style.setProperty('--b3', '#444');
+    document.documentElement.style.setProperty('--bg2', '#111');
+  }
+}
+
+function refreshRealtimeDate() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/realtime-date', true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4 && xhr.status === 200) {
+      applyRealtimeDateUI(JSON.parse(xhr.responseText));
+    }
+  };
+  xhr.send();
+}
+
+refreshRealtimeDate();
+setInterval(refreshRealtimeDate, 30000);
+requestRealtimeRun({ silent: true, force: true, resetStep: true });
+startRealtimeRunPolling();
+Chart.defaults.color = '#555';
+updateBtns();
+
+function renderProcessSource(procs) {
+  if (!procs || procs.length === 0) { hide('procSrcPanel'); return; }
+  show('procSrcPanel');
+  var html = '';
+  for (var i = 0; i < procs.length; i++) {
+    var p = procs[i];
+    var memMB = p.mem_kb >= 1024*1024 ? (p.mem_kb/1024/1024).toFixed(1)+'GB' : Math.round(p.mem_kb/1024)+'MB';
+    var volStr = p.volatility_label ? p.volatility_label : memMB;
+    var pagesStr = p.pages ? p.pages.join(',') : (''+p.page);
+    var pctStr = p.mem_pct ? ' ('+p.mem_pct+'% Activity)' : '';
+    html += '<span class="proc-chip" style="cursor:pointer;" onclick="useProcessPages(\'' + pagesStr + '\', \'' + p.name + '\')" title="Click to isolate this process">' + p.name + ' <span class="pc-mem">' + volStr + pctStr + ' &rarr; Pages [' + pagesStr + ']</span></span>';
+  }
+  $('procSrcChips').innerHTML = html;
+}
+
+window.useProcessPages = function(pagesStr, processName) {
+  var pages = pagesStr.split(',').map(Number);
+  if (!pages || pages.length === 0) return;
+  var ref = [];
+  var lastPage = pages[0];
+  for(var i=0; i<12; i++) {
+     if (Math.random() < 0.3 && pages.length > 1) {
+         var nextIdx = pages.indexOf(lastPage) + 1;
+         if (nextIdx >= pages.length) nextIdx = 0;
+         lastPage = pages[nextIdx];
+     } else if (Math.random() < 0.6) {
+     } else {
+         lastPage = pages[Math.floor(Math.random() * pages.length)];
+     }
+     ref.push(lastPage);
+  }
+  
+  $('refIn').value = ref.join(',');
+  $('refIn').setAttribute('data-manual', '1');
+  
+  if (realtimeRunInt) { clearInterval(realtimeRunInt); realtimeRunInt = null; }
+  var badge = document.querySelector('.live-dot');
+  if (badge) badge.style.display = 'none';
+  
+  var psrcLabel = document.querySelector('.psrc-label');
+  if (psrcLabel) {
+      psrcLabel.innerHTML = 'Reference string isolated manually for process: <strong>' + processName + '</strong> <a href="#" onclick="location.reload()" style="color:#4ade80;margin-left:8px;text-decoration:none;">&#8635; Resume Live Feed</a>';
+  }
+  
+  runSim();
+};
+</script>
+</body>
+</html>
+
