@@ -26,10 +26,10 @@ Repo scope: Flask-based virtual memory simulator with paging algorithms, segment
 - `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/tests/test_optimal.py` — Optimal tests.
 - `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/tests/test_segmentation.py` — segmentation tests.
 - `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/README.md` — project overview and roadmap.
-- `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/insane.txt` — task breakdown and architecture notes.
+- `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/docs/notes/insane.txt` — task breakdown and architecture notes.
 - `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/requirements.txt` — Python dependencies.
 - `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/Procfile` and `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/vercel.json` — deployment configuration.
-- `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/app/index.html` and `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/app/segmentation.html` — single-file frontends with embedded CSS/JS.
+- `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/app/templates/*.html` and `c:/Users/aamod/Desktop/Active/virtualization_paging-segmentation/app/static/**/*` — Flask template/static frontend structure.
 
 **Verification**
 1. Confirm the codebase inventory against the actual files present in the workspace.
@@ -38,5 +38,5 @@ Repo scope: Flask-based virtual memory simulator with paging algorithms, segment
 
 **Decisions**
 - Treat the repository as a Flask + vanilla HTML/JS app, not the older Dash-oriented description in early docs.
-- Consider segmentation implemented in both backend and frontend, with the frontend living inside the HTML files rather than separate JS/CSS bundles.
+- Consider segmentation implemented in both backend and frontend, with frontend separated into Flask templates plus static JS/CSS bundles.
 - Base conclusions on realtime repository contents, not stale documentation or earlier snapshots.
