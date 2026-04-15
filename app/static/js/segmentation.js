@@ -12,6 +12,7 @@
     extraOps: [],
     loading: false
   };
+  var livePollInt = null;
 
   /* ── Color system ── */
   var PROC_HUES = [190, 35, 280, 150, 320, 60, 220, 10, 100, 250];
@@ -119,17 +120,24 @@
     }
     if (s === 'best_fit') document.getElementById('ax-lat').textContent = 'O(N log N)';
     else document.getElementById('ax-lat').textContent = 'O(N)';
-    
-    if (state.demoMode) {
-      strategyDemo();
-    } else if (state.processes && state.processes.length > 0) {
+
+    if (state.processes && state.processes.length > 0) {
       refreshLive();
     }
   }
 
-  function compactMemory() {
-    state.extraOps.push({ action: 'compact' });
-    loadLiveData();
+  function startLivePolling() {
+    if (livePollInt) clearInterval(livePollInt);
+    livePollInt = setInterval(function () {
+      if (!state.loading) loadLiveData();
+    }, 10000);
+  }
+
+  function stopLivePolling() {
+    if (livePollInt) {
+      clearInterval(livePollInt);
+      livePollInt = null;
+    }
   }
 
   function refreshLive() {
@@ -137,99 +145,17 @@
     procColorMap = {};
     procColorIdx = 0;
     loadLiveData();
+    startLivePolling();
   }
 
   function resetAll() {
+    stopLivePolling();
     state.extraOps = [];
     state.snapshots = [];
     state.processes = [];
-    state.demoMode = false;
     procColorMap = {};
     procColorIdx = 0;
     renderAll();
-  }
-
-  /* ══════════════════════════════════════════════
-   *  STRATEGY DEMO — controlled scenario showing
-   *  how each strategy picks a DIFFERENT hole
-   * ══════════════════════════════════════════════ */
-  function strategyDemo() {
-    if (state.loading) return;
-    state.loading = true;
-    state.demoMode = true;
-    updateButtonState();
-
-    /*
-     * Scenario: 2048B memory, 16B blocks
-     *  1. Alloc A=400, B=200, C=600, D=300, E=100
-     *  2. Free B (creates 208B hole), Free D (creates 304B hole)
-     *  3. Alloc NEW=150 → WHERE does it go?
-     *
-     *  FIRST_FIT → picks the FIRST hole (208B hole at B's old spot)
-     *  BEST_FIT  → picks the SMALLEST fitting hole (208B)
-     *  WORST_FIT → picks the LARGEST hole (304B at D's old spot)
-     *  NEXT_FIT  → picks first hole from last alloc cursor
-     */
-    var ops = [
-      {action:'alloc', name:'ProcessA.text', size: 500},
-      {action:'alloc', name:'ProcessB.heap', size: 250},
-      {action:'alloc', name:'ProcessC.data', size: 750},
-      {action:'alloc', name:'ProcessD.stack', size: 375},
-      {action:'alloc', name:'ProcessE.text', size: 125},
-      {action:'free',  name:'ProcessB.heap'},
-      {action:'free',  name:'ProcessD.stack'},
-      {action:'alloc', name:'NEW_ALLOC.heap', size: 188}
-    ];
-
-    var payload = {
-      operations: ops,
-      strategy: state.strategy,
-      total_memory: 2048,
-      block_size: 20
-    };
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/segmentation', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState !== 4) return;
-      state.loading = false;
-      updateButtonState();
-
-      if (xhr.status === 200) {
-        try {
-          var snapshots = JSON.parse(xhr.responseText);
-          state.snapshots = snapshots;
-          state.totalMem = 2048;
-          state.blockSize = 16;
-
-          /* Build process list from demo */
-          state.processes = [
-            {name:'ProcessA', real_mem_kb:400, pids:[1001], segments:{'ProcessA.text':1}, instances:1, real_mem_mb:0.4},
-            {name:'ProcessC', real_mem_kb:600, pids:[1003], segments:{'ProcessC.data':1}, instances:1, real_mem_mb:0.6},
-            {name:'ProcessE', real_mem_kb:100, pids:[1005], segments:{'ProcessE.text':1}, instances:1, real_mem_mb:0.1},
-            {name:'NEW_ALLOC', real_mem_kb:150, pids:[9999], segments:{'NEW_ALLOC.heap':1}, instances:1, real_mem_mb:0.15}
-          ];
-          state.systemInfo = {total_process_count: 4};
-
-          procColorMap = {};
-          procColorIdx = 0;
-          for (var i = 0; i < state.processes.length; i++) {
-            getColorForProcess(state.processes[i].name);
-          }
-          /* Give freed processes a color too for history */
-          getColorForProcess('ProcessB');
-          getColorForProcess('ProcessD');
-
-          document.getElementById('inp-total-mem').value = '2048';
-          document.getElementById('inp-block-size').value = '16';
-          renderAll();
-        } catch (e) {
-          console.error('Demo parse error:', e);
-        }
-      }
-    };
-    xhr.send(JSON.stringify(payload));
   }
 
   /* ── Config listeners ── */
@@ -544,8 +470,10 @@
   function renderHolesTable(snap) {
     var emptyEl = document.getElementById('holes-table-empty');
     var tableEl = document.getElementById('holes-table');
+    emptyEl.textContent = 'No holes — memory is contiguous';
 
     if (!snap || !snap.free_holes || snap.free_holes.length === 0) {
+      emptyEl.textContent = 'Run START_SIMULATION to inspect free holes';
       emptyEl.style.display = 'block';
       tableEl.style.display = 'none';
       return;
@@ -592,6 +520,8 @@
         '<td class="num">' + pct + '%</td>';
       tbody.appendChild(tr);
     }
+
+    tableEl.style.display = 'table';
   }
 
   /* ══════════════════════════════════════════════
@@ -667,4 +597,5 @@
    * ══════════════════════════════════════════════ */
   window.onload = function () {
     renderAll();
+    refreshLive();
   };

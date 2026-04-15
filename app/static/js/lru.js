@@ -270,17 +270,11 @@ function requestRealtimeRun(opts) {
     runBtn.disabled = true;
   }
 
-  var isManual = $('refIn').getAttribute('data-manual') === '1';
   var query =
     'frames=' + encodeURIComponent(fc) +
     '&algorithm=' + encodeURIComponent(ALGO) +
-    '&max_belady_frames=10';
-
-  if (!isManual) {
-    query += '&live=1&live_source=windows&window_size=12&max_page=9';
-  } else {
-    query += '&reference_string=' + encodeURIComponent($('refIn').value);
-  }
+    '&max_belady_frames=10' +
+    '&live=1&live_source=windows&window_size=12&max_page=9';
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/api/realtime-algorithms?' + query, true);
@@ -361,14 +355,6 @@ $('fcSlider').addEventListener('input', function() { $('fcDisp').textContent = t
 $('refIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') runSim(); });
 $('fcSlider').addEventListener('change', scheduleRun);
 
-$('refIn').addEventListener('input', function() {
-  $('refIn').setAttribute('data-manual', '1');
-  if (realtimeRunInt) { clearInterval(realtimeRunInt); realtimeRunInt = null; }
-  var dot = document.querySelector('.live-dot');
-  if (dot) dot.style.display = 'none';
-  scheduleRun();
-});
-
 function applyRealtimeDateUI(payload) {
   var nav = document.querySelector('nav');
   if (!nav || !payload) return;
@@ -420,6 +406,10 @@ updateBtns();
 function renderProcessSource(procs) {
   if (!procs || procs.length === 0) { hide('procSrcPanel'); return; }
   show('procSrcPanel');
+  var psrcLabel = document.querySelector('.psrc-label');
+  if (psrcLabel) {
+    psrcLabel.textContent = 'Reference string generated from these real Windows processes:';
+  }
   var html = '';
   for (var i = 0; i < procs.length; i++) {
     var p = procs[i];
@@ -427,39 +417,7 @@ function renderProcessSource(procs) {
     var volStr = p.volatility_label ? p.volatility_label : memMB;
     var pagesStr = p.pages ? p.pages.join(',') : (''+p.page);
     var pctStr = p.mem_pct ? ' ('+p.mem_pct+'% Activity)' : '';
-    html += '<span class="proc-chip" style="cursor:pointer;" onclick="useProcessPages(\'' + pagesStr + '\', \'' + p.name + '\')" title="Click to isolate this process">' + p.name + ' <span class="pc-mem">' + volStr + pctStr + ' &rarr; Pages [' + pagesStr + ']</span></span>';
+    html += '<span class="proc-chip">' + p.name + ' <span class="pc-mem">' + volStr + pctStr + ' &rarr; Pages [' + pagesStr + ']</span></span>';
   }
   $('procSrcChips').innerHTML = html;
 }
-
-window.useProcessPages = function(pagesStr, processName) {
-  var pages = pagesStr.split(',').map(Number);
-  if (!pages || pages.length === 0) return;
-  var ref = [];
-  var lastPage = pages[0];
-  for(var i=0; i<12; i++) {
-     if (Math.random() < 0.3 && pages.length > 1) {
-         var nextIdx = pages.indexOf(lastPage) + 1;
-         if (nextIdx >= pages.length) nextIdx = 0;
-         lastPage = pages[nextIdx];
-     } else if (Math.random() < 0.6) {
-     } else {
-         lastPage = pages[Math.floor(Math.random() * pages.length)];
-     }
-     ref.push(lastPage);
-  }
-  
-  $('refIn').value = ref.join(',');
-  $('refIn').setAttribute('data-manual', '1');
-  
-  if (realtimeRunInt) { clearInterval(realtimeRunInt); realtimeRunInt = null; }
-  var badge = document.querySelector('.live-dot');
-  if (badge) badge.style.display = 'none';
-  
-  var psrcLabel = document.querySelector('.psrc-label');
-  if (psrcLabel) {
-      psrcLabel.innerHTML = 'Reference string isolated manually for process: <strong>' + processName + '</strong> <a href="#" onclick="location.reload()" style="color:#4ade80;margin-left:8px;text-decoration:none;">&#8635; Resume Live Feed</a>';
-  }
-  
-  runSim();
-};

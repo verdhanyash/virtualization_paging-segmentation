@@ -413,26 +413,22 @@ def realtime_algorithms_api():
         windows_process_count = 0
 
         if live_mode:
-            if live_source == 'windows':
-                windows_live = _build_windows_live_reference(
-                    window_size=request.args.get('window_size', 12),
-                    max_page=request.args.get('max_page', 9)
-                )
-                if windows_live:
-                    ref_string = windows_live['reference_string']
-                    live_tick = windows_live['tick']
-                    windows_process_rows = windows_live['process_rows']
-                    windows_process_window = windows_live['process_window']
-                    windows_process_count = windows_live['process_count']
-                    live_source_used = 'windows'
-                else:
-                    raise ValueError('Windows process snapshot unavailable for live_source=windows')
+            if live_source != 'windows':
+                raise ValueError('Only live_source=windows is supported in live mode')
+
+            windows_live = _build_windows_live_reference(
+                window_size=request.args.get('window_size', 12),
+                max_page=request.args.get('max_page', 9)
+            )
+            if windows_live:
+                ref_string = windows_live['reference_string']
+                live_tick = windows_live['tick']
+                windows_process_rows = windows_live['process_rows']
+                windows_process_window = windows_live['process_window']
+                windows_process_count = windows_live['process_count']
+                live_source_used = 'windows'
             else:
-                ref_string, live_tick = _next_live_reference(
-                    window_size=request.args.get('window_size', 12),
-                    max_page=request.args.get('max_page', 9)
-                )
-                live_source_used = 'synthetic'
+                raise ValueError('Windows process snapshot unavailable for live_source=windows')
         else:
             ref_string = _normalize_reference_string(
                 request.args.get('reference_string', '7,0,1,2,0,3,0,4,2,3,0,3,2')

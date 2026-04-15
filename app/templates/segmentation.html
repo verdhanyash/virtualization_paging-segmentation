@@ -17,11 +17,6 @@
     <a href="#proc-list" class="sidebar-link"><span class="icon">&#9643;</span> PROCESSES</a>
     <a href="#history-log" class="sidebar-link"><span class="icon">&#8801;</span> LOGS</a>
     <a href="#segment-table" class="sidebar-link"><span class="icon">&#9636;</span> DIAGNOSTICS</a>
-
-    <div class="bottom-info">
-      <span style="color:var(--accent-green)">&#9679;</span> ENGINE: NOMINAL<br><br>
-      BUILT FOR TECHNICAL EXCELLENCE // KINETIC PRECISION V1.2
-    </div>
   </aside>
 
   <!-- MAIN -->
@@ -58,9 +53,7 @@
           <div class="panel addr-space-box">
             <div class="panel-header">
               <div class="panel-title"><span class="panel-title-icon">■</span> LIVE ADDRESS SPACE</div>
-              <div class="panel-meta">SCALE: LINEAR_FLOW →</div>
-            </div>
-            <div class="addr-coords"><span>0x000000</span><span class="center">LINEAR_ADDRESS_FLOW</span><span>0xFFFFFF</span></div>
+              </div>
             <div class="comp-bar" id="comp-bar"></div>
             <div class="legend-row" id="comp-legend"></div>
           </div>
@@ -78,7 +71,7 @@
               <button class="strat-btn" data-strategy="next_fit" onclick="setStrategy('next_fit')"><span class="strat-num">04</span><span class="strat-lbl">NEXT_FIT</span></button>
             </div>
             <div style="margin-top:12px;padding:10px 14px;background:var(--bg-card);border-left:2px solid var(--accent-cyan);font-size: 9.6px;color:var(--text-dim);line-height:1.6;">
-              <span style="color:var(--accent-cyan)">NOTE:</span> Strategies only differ when there are <strong style="color:var(--text-white)">holes</strong> (gaps from freed segments). From empty memory, all strategies produce the same result. Use <strong style="color:var(--accent-green)">STRATEGY_DEMO</strong> to see the difference.
+              <span style="color:var(--accent-cyan)">NOTE:</span> Strategies only differ when there are <strong style="color:var(--text-white)">holes</strong> (gaps from freed segments). From empty memory, all strategies produce the same result.
             </div>
           </div>
 
@@ -100,10 +93,8 @@
             <div class="panel-header"><div class="panel-title">EXECUTION_ENGINE</div></div>
             <div class="exec-engine">
               <button class="btn-primary" id="btn-start" onclick="refreshLive()">START_SIMULATION <span>▶</span></button>
-              <button class="btn-primary" id="btn-demo" onclick="strategyDemo()" style="background:var(--accent-cyan);">STRATEGY_DEMO <span>⚡</span></button>
               <div class="row-btns">
-                <button class="btn-gray" id="btn-compact" onclick="compactMemory()">COMPACT</button>
-                <button class="btn-gray" id="btn-reset" onclick="resetAll()">RESET</button>
+                <button class="btn-gray btn-reset-large" id="btn-reset" onclick="resetAll()">RESET</button>
               </div>
             </div>
           </div>
