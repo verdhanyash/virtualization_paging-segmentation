@@ -1,6 +1,4 @@
 import json
-import csv
-import io
 import os
 import subprocess
 from datetime import datetime
@@ -16,9 +14,6 @@ VALID_ALGOS = {'FIFO', 'LRU', 'Optimal'}
 VALID_SEGMENTATION_STRATEGIES = {'first_fit', 'best_fit', 'worst_fit', 'next_fit'}
 
 
-def _parse_tasklist_mem_kb(mem_text):
-    digits = ''.join(ch for ch in str(mem_text) if ch.isdigit())
-    return int(digits) if digits else 0
 
 
 def _get_windows_process_snapshot(limit=96):

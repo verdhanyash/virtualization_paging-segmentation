@@ -152,14 +152,7 @@ body::before {
 }
 .sidebar-link.active .icon { color: var(--accent-primary); }
 
-.bottom-info {
-  margin-top: auto;
-  padding: 0 24px;
-  font-size: 11.2px;
-  color: var(--text-dimmer);
-  letter-spacing: 0.1em;
-  line-height: 1.7;
-}
+
 
 /* ═══════════════════════════════════════════════════════════
    MAIN LAYOUT
@@ -352,17 +345,7 @@ body::before {
    LIVE ADDRESS SPACE
    ═══════════════════════════════════════════════════════════ */
 .addr-space-box { padding: 28px; }
-.addr-coords {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  font-size: 12.5px;
-  color: var(--accent-primary);
-  margin-bottom: 12px;
-  letter-spacing: 0.1em;
-  font-family: 'JetBrains Mono', monospace;
-}
-.addr-coords .center { color: var(--text-dimmer); }
+
 
 .comp-bar {
   display: flex;
@@ -471,17 +454,8 @@ body::before {
   left: 0; top: 0; bottom: 0;
   width: 3px;
 }
-.proc-hdr {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
 .proc-name { color: var(--text-white); font-weight: 600; font-size: 15px; }
 .proc-pid  { font-size: 11.2px; font-weight: 600; }
-.proc-stats { display: flex; align-items: baseline; gap: 10px; }
-.stat-vol  { font-size: 27.5px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
-.stat-unit { font-size: 13.8px; }
 .stat-lbl  { font-size: 10px; color: var(--text-dimmer); text-transform: uppercase; writing-mode: vertical-rl; }
 .seg-count { font-size: 12.5px; color: var(--text-white); margin-left: auto; text-transform: uppercase; }
 
@@ -819,23 +793,7 @@ td {
 th.num, td.num { text-align: right; }
 tr:hover td { background: var(--bg-card); color: var(--text-white); }
 
-.table-swatch { width: 8px; height: 8px; display: inline-block; margin-right: 8px; border-radius: 50%; vertical-align: middle; }
-.frag-highlight { color: var(--accent-danger) !important; font-weight: 600; }
 
-.free-btn {
-  background: transparent;
-  color: var(--text-dimmer);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius-sm);
-  padding: 4px 10px;
-  font-family: inherit;
-  font-size: 11.2px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.free-btn:hover { border-color: var(--accent-danger); color: var(--accent-danger); }
 
 /* ═══════════════════════════════════════════════════════════
    OPERATION HISTORY
@@ -936,12 +894,7 @@ tr:hover td { background: var(--bg-card); color: var(--text-white); }
 /* ═══════════════════════════════════════════════════════════
    INDEX PAGE — ALGORITHM CARDS
    ═══════════════════════════════════════════════════════════ */
-.pnl {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-xl);
-  padding: 16px;
-}
+
 .sec {
   font-size: 11.2px;
   color: var(--text-dim);
