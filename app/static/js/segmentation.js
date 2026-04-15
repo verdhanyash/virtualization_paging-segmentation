@@ -50,23 +50,56 @@
   /* ══════════════════════════════════════════════
    *  API CALL
    * ══════════════════════════════════════════════ */
+  function toggleSegMode() {
+    var live = document.getElementById('liveToggleSeg').checked;
+    document.getElementById('inp-custom-ops').style.display = live ? 'none' : 'block';
+  }
+
   function loadLiveData() {
     if (state.loading) return;
     state.loading = true;
     updateButtonState();
 
-    var q = 'strategy=' + encodeURIComponent(state.strategy) +
-      '&total_memory=' + state.totalMem +
-      '&block_size=' + state.blockSize +
-      '&max_processes=' + state.maxProcs;
+    var useLive = document.getElementById('liveToggleSeg') && document.getElementById('liveToggleSeg').checked;
+    
+    if (useLive) {
+      var q = 'strategy=' + encodeURIComponent(state.strategy) +
+        '&total_memory=' + state.totalMem +
+        '&block_size=' + state.blockSize +
+        '&max_processes=' + state.maxProcs;
 
-    if (state.extraOps.length > 0) {
-      q += '&extra_ops=' + encodeURIComponent(JSON.stringify(state.extraOps));
+      if (state.extraOps.length > 0) {
+        q += '&extra_ops=' + encodeURIComponent(JSON.stringify(state.extraOps));
+      }
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/api/live-segmentation?' + q, true);
+      xhr.onreadystatechange = xhrCallback;
+      xhr.send();
+    } else {
+      var opsText = document.getElementById('inp-custom-ops').value.trim();
+      var customOps = [];
+      if (opsText) {
+        try {
+          customOps = JSON.parse(opsText);
+        } catch(e) {
+          alert('Invalid JSON in custom operations. Reverting to empty.');
+        }
+      }
+      var postData = {
+        strategy: state.strategy,
+        total_memory: state.totalMem,
+        block_size: state.blockSize,
+        operations: customOps
+      };
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/segmentation', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onreadystatechange = xhrCallback;
+      xhr.send(JSON.stringify(postData));
     }
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/api/live-segmentation?' + q, true);
-    xhr.onreadystatechange = function () {
+    
+    function xhrCallback() {
       if (xhr.readyState !== 4) return;
       state.loading = false;
       updateButtonState();
@@ -76,7 +109,7 @@
           var data = JSON.parse(xhr.responseText);
           state.processes = data.processes || [];
           state.systemInfo = data.system || {};
-          state.snapshots = (data.simulation && data.simulation.snapshots) ? data.simulation.snapshots : [];
+          state.snapshots = (data.snapshots || (data.simulation && data.simulation.snapshots)) ? (data.snapshots || data.simulation.snapshots) : [];
 
           /* rebuild color map from process order */
           procColorMap = {};
@@ -92,7 +125,6 @@
         console.error('API error', xhr.status, xhr.responseText);
       }
     };
-    xhr.send();
   }
 
   function updateButtonState() {

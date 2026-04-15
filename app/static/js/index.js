@@ -40,14 +40,17 @@ var allResults = null;
         btn.disabled = true;
       }
 
+      var useLive = $('liveToggle') && $('liveToggle').checked;
+      $('refIn').readOnly = useLive;
       var query =
         '&frames=' + encodeURIComponent(fc) +
         '&algorithm=FIFO' +
-        '&max_belady_frames=10' +
-        '&live=1' +
-        '&live_source=windows' +
-        '&window_size=12' +
-        '&max_page=9';
+        '&max_belady_frames=10';
+      if (useLive) {
+        query += '&live=1&live_source=windows&window_size=12&max_page=9';
+      } else {
+        query += '&live=0&reference_string=' + encodeURIComponent($('refIn').value);
+      }
 
       var xhr = new XMLHttpRequest();
       xhr.open('GET', '/api/realtime-algorithms?' + query.replace(/^&/, ''), true);

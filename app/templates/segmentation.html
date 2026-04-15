@@ -82,6 +82,10 @@
               <div class="field">Block Size (B)<input type="number" id="inp-block-size" value="64" style="width:100px"></div>
               <div class="field">Max Procs<input type="number" id="inp-max-procs" value="8" min="2" max="12" style="width:80px"></div>
             </div>
+            <div style="margin-top:16px" class="field">
+              <span class="lbl"><label><input type="checkbox" id="liveToggleSeg" checked onchange="toggleSegMode()"> Use Live Windows Telemetry</label></span>
+              <textarea id="inp-custom-ops" style="width:100%;height:80px;font-family:monospace;margin-top:8px;background:var(--bg-body);color:var(--text-white);border:1px solid #334155;padding:8px;display:none" placeholder='[{"type":"allocate","process":"CustomApp","size":1024},{"type":"free","process":"CustomApp"}]'></textarea>
+            </div>
           </div>
         </div>
 
