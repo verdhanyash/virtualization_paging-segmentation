@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -34,7 +34,7 @@
         <a href="/segmentation" class="top-nav-link">SEGMENT_FIT</a>
       </div>
       <div class="header-status">
-        <span class="dot"></span> SYS_READY_V2.4 <span style="color:var(--text-dimmer)">&#9881;</span>
+        <span class="dot"></span>
       </div>
     </nav>
     <div class="content-area">
@@ -178,14 +178,12 @@
           <div class="panel-header">
             <div class="panel-title">Segmentation Strategy Comparison</div>
             <div class="seg-preset-row">
-              <button class="bp" onclick="runSegCompare('frag')">&#9654; Fragmentation Demo</button>
-              <button class="bs" onclick="runSegCompare('compact')">Compaction Demo</button>
-              <button class="bs" onclick="runSegCompare('full')">Memory Full</button>
-              <button class="bs" onclick="runSegCompare('bestworst')">Best vs Worst</button>
+              <button class="bp" id="segLiveBtn" onclick="runSegCompare()">&#9654; Live Compare</button>
               <button class="bd" onclick="resetSegCompare()">&#10227; Reset</button>
+              <span class="algo-badge" style="margin-left:8px"><span class="live-dot"></span> Live Windows Processes</span>
             </div>
-            <div id="segEmpty" class="empty">Click a preset to run the same operations across First-Fit, Best-Fit,
-              Worst-Fit, and Next-Fit</div>
+            <div id="segProcSrc" class="proc-src" style="display:none;margin-top:6px"></div>
+            <div id="segEmpty" class="empty">Loading live process data&hellip;</div>
           </div>
 
           <div id="segResults" style="display:none">

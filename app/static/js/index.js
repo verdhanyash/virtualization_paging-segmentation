@@ -1,4 +1,4 @@
-﻿var allResults = null;
+var allResults = null;
     var cComp = null, cBelady = null, cRace = null;
     var compareTimer = null;
     var realtimeCompareInt = null;
@@ -221,91 +221,50 @@
 
     Chart.defaults.color = '#204768';
 
-    // --- Segmentation Strategy Comparison ---
-    var SEG_PRESETS = {
-      'frag': {
-        totalMem: 1024, blockSize: 16,
-        operations: [
-          { action: 'alloc', name: 'A', size: 250 },
-          { action: 'alloc', name: 'B', size: 375 },
-          { action: 'alloc', name: 'C', size: 500 },
-          { action: 'free', name: 'B' },
-          { action: 'alloc', name: 'D', size: 125 }
-        ]
-      },
-      'compact': {
-        totalMem: 2000, blockSize: 16,
-        operations: [
-          { action: 'alloc', name: 'A', size: 625 },
-          { action: 'alloc', name: 'B', size: 625 },
-          { action: 'alloc', name: 'C', size: 625 },
-          { action: 'free', name: 'A' },
-          { action: 'free', name: 'C' },
-          { action: 'compact' }
-        ]
-      },
-      'full': {
-        totalMem: 4096, blockSize: 16,
-        operations: [
-          { action: 'alloc', name: 'A', size: 1250 },
-          { action: 'alloc', name: 'B', size: 1250 },
-          { action: 'alloc', name: 'C', size: 1250 },
-          { action: 'alloc', name: 'D', size: 1250 },
-          { action: 'alloc', name: 'E', size: 625 }
-        ]
-      },
-      'bestworst': {
-        totalMem: 2000, blockSize: 16,
-        operations: [
-          { action: 'alloc', name: 'A', size: 250 },
-          { action: 'alloc', name: 'B', size: 1000 },
-          { action: 'alloc', name: 'C', size: 625 },
-          { action: 'free', name: 'A' },
-          { action: 'free', name: 'B' },
-          { action: 'alloc', name: 'D', size: 188 }
-        ]
-      }
-    };
-
+    // --- Segmentation Strategy Comparison (Live Process Data) ---
     var STRATEGIES = ['first_fit', 'best_fit', 'worst_fit', 'next_fit'];
     var STRAT_LABELS = { 'first_fit': 'First-Fit', 'best_fit': 'Best-Fit', 'worst_fit': 'Worst-Fit', 'next_fit': 'Next-Fit' };
     var cSegExt = null, cSegUtil = null;
+    var segCompareInt = null;
 
-    function runSegCompare(presetKey) {
-      var preset = SEG_PRESETS[presetKey];
-      if (!preset) return;
+    function runSegCompare() {
+      var btn = document.getElementById('segLiveBtn');
+      if (btn) { btn.innerHTML = '&#8987; Loading...'; btn.disabled = true; }
 
-      var pending = STRATEGIES.length;
-      var results = {};
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/api/live-seg-compare?total_memory=4096&block_size=16', true);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (btn) { btn.innerHTML = '&#9654; Live Compare'; btn.disabled = false; }
 
-      for (var s = 0; s < STRATEGIES.length; s++) {
-        (function (strat) {
-          var xhr = new XMLHttpRequest();
-          xhr.open('POST', '/api/segmentation', true);
-          xhr.setRequestHeader('Content-Type', 'application/json');
-          xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4) {
-              if (xhr.status === 200) {
-                var snaps = JSON.parse(xhr.responseText);
-                results[strat] = snaps.length > 0 ? snaps[snaps.length - 1] : null;
-              }
-              pending--;
-              if (pending === 0) renderSegComparison(results);
-            }
-          };
-          xhr.send(JSON.stringify({
-            operations: preset.operations,
-            strategy: strat,
-            total_memory: preset.totalMem,
-            block_size: preset.blockSize
-          }));
-        })(STRATEGIES[s]);
-      }
+        if (xhr.status === 200) {
+          try {
+            var data = JSON.parse(xhr.responseText);
+            renderSegComparison(data);
+          } catch (e) { console.error('Seg compare parse error', e); }
+        } else {
+          console.error('Seg compare API error', xhr.status);
+        }
+      };
+      xhr.send();
     }
 
-    function renderSegComparison(results) {
+    function renderSegComparison(data) {
       $('segEmpty').style.display = 'none';
       $('segResults').style.display = '';
+
+      // Show process source chips
+      var srcEl = $('segProcSrc');
+      if (srcEl && data.process_source) {
+        var srcHtml = '';
+        for (var p = 0; p < data.process_source.length; p++) {
+          var ps = data.process_source[p];
+          var memMB = Math.round(ps.mem_kb / 1024);
+          srcHtml += '<span class="proc-chip">' + ps.name + ' <span class="pc-mem">' + memMB + 'MB</span></span>';
+        }
+        srcEl.innerHTML = srcHtml;
+        srcEl.style.display = '';
+      }
 
       var cards = $('segCards');
       cards.innerHTML = '';
@@ -314,11 +273,11 @@
       var stratData = [];
       for (var i = 0; i < STRATEGIES.length; i++) {
         var strat = STRATEGIES[i];
-        var snap = results[strat];
-        var f = snap && snap.fragmentation ? snap.fragmentation : null;
+        var stratResult = data.strategies[strat];
+        var f = stratResult && stratResult.fragmentation ? stratResult.fragmentation : null;
         var ext = f ? f.external_frag : 0;
         if (ext < minExt) minExt = ext;
-        stratData.push({ strat: strat, snap: snap, frag: f, ext: ext });
+        stratData.push({ strat: strat, frag: f, ext: ext });
       }
 
       var extData = [], utilData = [], labels = [];
@@ -387,9 +346,15 @@
       $('segEmpty').style.display = '';
       $('segResults').style.display = 'none';
       $('segCards').innerHTML = '';
+      var srcEl = $('segProcSrc');
+      if (srcEl) srcEl.style.display = 'none';
       if (cSegExt) { cSegExt.destroy(); cSegExt = null; }
       if (cSegUtil) { cSegUtil.destroy(); cSegUtil = null; }
     }
+
+    // Auto-run live compare on page load and poll every 30s
+    runSegCompare();
+    segCompareInt = setInterval(runSegCompare, 30000);
 
     function applyRealtimeDateUI(payload) {
       var nav = document.querySelector('nav');
