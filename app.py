@@ -41,7 +41,8 @@ def _get_windows_process_snapshot(limit=96):
         ps_cmd = (
             "Get-Process | Where-Object { $_.CPU -gt 0 } | "
             "Sort-Object CPU -Descending | Select-Object -First " + str(int(limit)) + " "
-            "ProcessName, Id, CPU, @{N='WS';E={$_.WorkingSet64}} | ConvertTo-Json -Compress"
+            "ProcessName, Id, CPU, @{N='WS';E={$_.WorkingSet64}}, "
+            "@{N='BaseAddr';E={try{$_.MainModule.BaseAddress.ToInt64()}catch{0}}} | ConvertTo-Json -Compress"
         )
         tasklist = subprocess.run(
             ['powershell', '-NoProfile', '-Command', ps_cmd],
@@ -68,12 +69,14 @@ def _get_windows_process_snapshot(limit=96):
             # We treat CPU as the volatility weight. Fallback to WS if CPU missing.
             cpu = float(p.get('CPU') or 0)
             ws_kb = int(p.get('WS') or 0) // 1024
+            base_addr = int(p.get('BaseAddr') or 0)
             rows.append({
                 'name': p.get('ProcessName', 'Unknown'),
                 'pid': p.get('Id', 0),
                 'mem_kb': ws_kb,
                 'cpu': cpu,
-                'volatility': cpu if cpu > 0 else (ws_kb / 1024.0)
+                'volatility': cpu if cpu > 0 else (ws_kb / 1024.0),
+                'base_addr': base_addr
             })
     except json.JSONDecodeError:
         pass
@@ -117,7 +120,8 @@ def _build_windows_live_reference(window_size=12, max_page=9):
         if base not in grouped:
             grouped[base] = {
                 'name': p['name'], 'pid': p['pid'],
-                'mem_kb': 0, 'cpu': 0, 'volatility': 0, 'base_pid': p['pid']
+                'mem_kb': 0, 'cpu': 0, 'volatility': 0, 'base_pid': p['pid'],
+                'base_addr': p['base_addr']
             }
         grouped[base]['mem_kb'] += p['mem_kb']
         grouped[base]['cpu'] += p['cpu']
@@ -135,19 +139,24 @@ def _build_windows_live_reference(window_size=12, max_page=9):
     page_assignments = {}  # process_name -> list of page numbers
     process_meta = []      # for UI display
 
-    current_page = 1
+    # Instead of simplistic 1..max_page integers, we use hex pointers!
+    # To keep randomness bounded but realistic, each process gets a base allocation.
     for proc in top_procs:
         proportion = proc['volatility'] / total_vol
         # Each process gets at least 1 page, proportional to activity
         num_pages = max(1, round(proportion * max_page))
+        
+        base_addr = proc.get('base_addr', 0)
+        if base_addr == 0:
+            # Fallback realistic 64-bit Virtual Allocation base via PID math
+            base_addr = 0x7FFA00000000 + (proc['base_pid'] * 0x100000)
+            
+        base_page = base_addr // 4096
+        
         pages = []
-        for _ in range(num_pages):
-            if current_page > max_page:
-                current_page = 1
-            pages.append(current_page)
-            current_page += 1
-            if current_page > max_page:
-                current_page = 1
+        for i in range(num_pages):
+            page_hex = f"0x{(base_page + i):X}"
+            pages.append(page_hex)
 
         page_assignments[proc['name']] = pages
         process_meta.append({
@@ -156,7 +165,7 @@ def _build_windows_live_reference(window_size=12, max_page=9):
             'mem_kb': proc['mem_kb'],
             'cpu': proc['cpu'],
             'pages': pages,
-            'page': pages[0],  # primary page for display
+            'page': pages[0] if len(pages)>0 else "0x00",  # primary page for display
             'num_pages': len(pages),
             'mem_pct': round(proportion * 100, 1),
             'volatility_label': f"{proc['cpu']:.1f}s CPU" if proc['cpu'] > 0 else f"{proc['mem_kb']//1024} MB"
@@ -192,8 +201,13 @@ def _build_windows_live_reference(window_size=12, max_page=9):
             # Spatial locality: sequential or nearby page in this process
             page = rng.choice(available_pages)
         else:
-            # Random access: potential page fault
-            page = rng.randint(1, max_page)
+            # Random access: potential page fault (new page nearby, or just random)
+            if available_pages:
+                # We offset an existing page slightly to create a true cache miss
+                base_page = int(rng.choice(available_pages), 16)
+                page = f"0x{(base_page + rng.randint(-5, 5)):X}"
+            else:
+                page = f"0x{rng.randint(0x7FFA00000, 0x7FFA10000):X}"
 
         reference_string.append(page)
         recent_pages.append(page)
