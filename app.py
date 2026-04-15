@@ -16,7 +16,7 @@ try:
 except Exception:
     QDateTime = None
 
-flask_app = Flask(__name__, template_folder='app', static_folder='app', static_url_path='')
+flask_app = Flask(__name__, template_folder='app/templates', static_folder='app/static', static_url_path='/static')
 
 VALID_ALGOS = {'FIFO', 'LRU', 'Optimal'}
 VALID_SEGMENTATION_STRATEGIES = {'first_fit', 'best_fit', 'worst_fit', 'next_fit'}
