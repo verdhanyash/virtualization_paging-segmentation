@@ -84,7 +84,33 @@
             </div>
             <div style="margin-top:16px" class="field">
               <span class="lbl"><label><input type="checkbox" id="liveToggleSeg" checked onchange="toggleSegMode()"> Use Live Windows Telemetry</label></span>
-              <textarea id="inp-custom-ops" style="width:100%;height:80px;font-family:monospace;margin-top:8px;background:var(--bg-body);color:var(--text-white);border:1px solid #334155;padding:8px;display:none" placeholder='[{"type":"allocate","process":"CustomApp","size":1024},{"type":"free","process":"CustomApp"}]'></textarea>
+              <div id="inp-custom-ops" style="display:none;margin-top:12px;background:var(--bg-card);padding:12px;border:1px solid #334155;">
+                <div style="display:flex;gap:8px;align-items:end;margin-bottom:12px;">
+                  <div class="field" style="width:100px;">
+                    <span class="lbl">Action</span>
+                    <select id="co-action" style="width:100%" onchange="toggleCoSize()">
+                      <option value="alloc">Allocate</option>
+                      <option value="free">Free</option>
+                      <option value="compact">Compact</option>
+                    </select>
+                  </div>
+                  <div class="field" style="flex:1;">
+                    <span class="lbl">Process Name</span>
+                    <input type="text" id="co-name" placeholder="e.g. App_A">
+                  </div>
+                  <div class="field" id="co-size-container" style="width:80px;">
+                    <span class="lbl">Size (B)</span>
+                    <input type="number" id="co-size" value="1024" min="1">
+                  </div>
+                  <button class="btn-primary" onclick="addCustomOp()" style="padding:6px 12px;">ADD</button>
+                </div>
+                <div style="font-size:11px;color:var(--text-dimmer);margin-bottom:8px;">Pending Operations:</div>
+                <ul id="co-list" style="margin:0;padding:0;list-style:none;font-size:12px;max-height:100px;overflow-y:auto;border:1px solid #1e293b;background:#0f172a;">
+                </ul>
+                <div style="margin-top:8px;text-align:right;">
+                  <button class="btn-gray" onclick="clearCustomOps()" style="padding:4px 8px;font-size:11px;">CLEAR ALL</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -98,6 +124,7 @@
             <div class="exec-engine">
               <button class="btn-primary" id="btn-start" onclick="refreshLive()">START_SIMULATION <span>▶</span></button>
               <div class="row-btns">
+                <button class="btn-primary" onclick="triggerCompaction()" style="background:var(--accent-purple);border-color:var(--accent-purple);margin-right:8px;">COMPACT MEMORY</button>
                 <button class="btn-gray btn-reset-large" id="btn-reset" onclick="resetAll()">RESET</button>
               </div>
             </div>

@@ -101,6 +101,39 @@ function renderStep(si) {
   $('stF').textContent = nf;
   $('stH').textContent = nh;
   $('stR').textContent = Math.round(nf / (si + 1) * 100) + '%';
+  
+  // DEMAND PAGING VISUALIZATION
+  var allPagesFound = {};
+  for (var p = 0; p < steps.length; p++) { allPagesFound[steps[p].page] = true; }
+  var uniquePages = Object.keys(allPagesFound).sort(function(a,b){return parseInt(a)-parseInt(b)});
+  
+  var ptUI = $('pageTableUI');
+  var bsUI = $('backingStoreUI');
+  if (ptUI && bsUI) {
+    var ptHtml = '';
+    for (var k = 0; k < uniquePages.length; k++) {
+        var pg = uniquePages[k];
+        var isLoaded = s.frames.indexOf(parseFloat(pg)) !== -1 || s.frames.indexOf(String(pg)) !== -1 || s.frames.indexOf(+pg) !== -1;
+        var vBit = isLoaded ? 'V' : 'I';
+        var col = isLoaded ? '#10b981' : '#f43f5e';
+        ptHtml += '<div style="border:1px solid '+col+';color:'+col+';padding:2px 4px;font-size:11px;border-radius:2px;">Pg ' + pg + ' : ' + vBit + '</div>';
+    }
+    ptUI.innerHTML = ptHtml;
+    
+    var bsHtml = '';
+    for (var stepIdx = 0; stepIdx <= si; stepIdx++) {
+       var st = steps[stepIdx];
+       if (st.fault) {
+           bsHtml += '<div style="color:#10b981;">Step '+(stepIdx+1)+': [SWAP-IN] Page '+st.page+' loaded from disk.</div>';
+           if (st.evicted !== null && st.evicted !== undefined) {
+               bsHtml += '<div style="color:#94a3b8;">Step '+(stepIdx+1)+': [SWAP-OUT] Page '+st.evicted+' evicted to disk.</div>';
+           }
+       }
+    }
+    if (bsHtml === '') bsHtml = '<div style="color:var(--text-dimmer)">No swaps yet...</div>';
+    bsUI.innerHTML = bsHtml;
+    bsUI.scrollTop = bsUI.scrollHeight;
+  }
 }
 
 function renderHistory() {
@@ -271,7 +304,8 @@ function requestRealtimeRun(opts) {
   }
 
   var useLive = $('liveToggle') && $('liveToggle').checked;
-  if ($('refIn')) $('refIn').readOnly = useLive;
+  var refEl = $('refIn');
+  if (refEl) refEl.readOnly = useLive;
   
   var query =
     'frames=' + encodeURIComponent(fc) +
@@ -280,7 +314,8 @@ function requestRealtimeRun(opts) {
   if (useLive) {
     query += '&live=1&live_source=windows&window_size=12&max_page=9';
   } else {
-    query += '&live=0&reference_string=' + encodeURIComponent($('refIn').value);
+    var refStr = refEl ? refEl.value.trim() : '';
+    query += '&live=0' + (refStr ? '&reference_string=' + encodeURIComponent(refStr) : '');
   }
 
   var xhr = new XMLHttpRequest();

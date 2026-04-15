@@ -440,8 +440,13 @@ def realtime_algorithms_api():
                 t = int(time.time() * 2)
                 ref_string = [seq[(t + i) % len(seq)] for i in range(12)]
                 live_tick = t
-                windows_process_rows = [{'pid': 1, 'name': 'dummy.exe', 'memory_kb': 1024, 'cpu_percent': 10.0}]
-                windows_process_window = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                windows_process_rows = [{'pid': 1, 'name': 'dummy.exe', 'mem_kb': 1024, 'cpu': 10.0, 'volatility': 10.0}]
+                dummy_proc = {
+                    'name': 'dummy', 'pid': 1, 'pages': [1,2,3,4,5,6,7,8,9,10,11,12], 
+                    'page': 1, 'num_pages': 12, 'mem_pct': 100.0, 'cpu': 10.0, 
+                    'volatility_label': '10.0s CPU', 'mem_kb': 1024
+                }
+                windows_process_window = [dummy_proc for _ in range(12)]
                 windows_process_count = 1
                 live_source_used = 'dummy'
         else:
@@ -616,9 +621,9 @@ def live_segmentation_api():
 
         if not raw:
             raw = [
-                {'name': 'dummy_proc_A', 'memory_kb': 2048, 'pid': 100},
-                {'name': 'dummy_proc_B', 'memory_kb': 1024, 'pid': 101},
-                {'name': 'dummy_proc_C', 'memory_kb': 4096, 'pid': 102}
+                {'name': 'dummy_proc_A', 'mem_kb': 2048, 'pid': 100, 'cpu': 10.0, 'volatility': 10.0},
+                {'name': 'dummy_proc_B', 'mem_kb': 1024, 'pid': 101, 'cpu': 5.0, 'volatility': 5.0},
+                {'name': 'dummy_proc_C', 'mem_kb': 4096, 'pid': 102, 'cpu': 2.0, 'volatility': 2.0}
             ]
 
         # Group by base process name and aggregate memory

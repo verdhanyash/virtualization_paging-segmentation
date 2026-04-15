@@ -13,6 +13,67 @@
     loading: false
   };
   var livePollInt = null;
+  var pendingCustomOps = [];
+
+  function toggleCoSize() {
+    var act = document.getElementById('co-action').value;
+    document.getElementById('co-size-container').style.display = (act === 'alloc') ? '' : 'none';
+    if (act === 'compact') {
+      document.getElementById('co-name').disabled = true;
+      document.getElementById('co-name').value = '';
+    } else {
+      document.getElementById('co-name').disabled = false;
+    }
+  }
+
+  function addCustomOp() {
+    var act = document.getElementById('co-action').value;
+    var nm = document.getElementById('co-name').value.trim();
+    var sz = parseInt(document.getElementById('co-size').value, 10);
+    
+    if (act !== 'compact' && !nm) { alert('Process Name requires a value.'); return; }
+    
+    var op = { action: act };
+    if (act !== 'compact') op.name = nm;
+    if (act === 'alloc') {
+      if (isNaN(sz) || sz <= 0) { alert('Size must be a positive integer.'); return; }
+      op.size = sz;
+    }
+    
+    pendingCustomOps.push(op);
+    renderCustomOps();
+  }
+
+  function removeCustomOp(idx) {
+    pendingCustomOps.splice(idx, 1);
+    renderCustomOps();
+  }
+
+  function clearCustomOps() {
+    pendingCustomOps = [];
+    renderCustomOps();
+  }
+
+  function renderCustomOps() {
+    var ul = document.getElementById('co-list');
+    if (!ul) return;
+    ul.innerHTML = '';
+    for (var i = 0; i < pendingCustomOps.length; i++) {
+        var op = pendingCustomOps[i];
+        var li = document.createElement('li');
+        li.style.padding = '4px 8px';
+        li.style.borderBottom = '1px solid #1e293b';
+        li.style.display = 'flex';
+        li.style.justifyContent = 'space-between';
+        
+        var txt = '<strong>' + op.action.toUpperCase() + '</strong>';
+        if (op.name) txt += ' \u2014 ' + op.name;
+        if (op.size) txt += ' (' + op.size + 'B)';
+        
+        li.innerHTML = '<span>' + txt + '</span><span style="color:#ef4444;cursor:pointer" onclick="removeCustomOp(' + i + ')">\u2715</span>';
+        ul.appendChild(li);
+    }
+  }
 
   /* ── Color system ── */
   var PROC_HUES = [190, 35, 280, 150, 320, 60, 220, 10, 100, 250];
@@ -77,15 +138,7 @@
       xhr.onreadystatechange = xhrCallback;
       xhr.send();
     } else {
-      var opsText = document.getElementById('inp-custom-ops').value.trim();
-      var customOps = [];
-      if (opsText) {
-        try {
-          customOps = JSON.parse(opsText);
-        } catch(e) {
-          alert('Invalid JSON in custom operations. Reverting to empty.');
-        }
-      }
+      var customOps = pendingCustomOps.slice();
       var postData = {
         strategy: state.strategy,
         total_memory: state.totalMem,
@@ -178,6 +231,12 @@
     procColorIdx = 0;
     loadLiveData();
     startLivePolling();
+  }
+  
+  function triggerCompaction() {
+    var op = { action: 'compact' };
+    state.extraOps.push(op);
+    loadLiveData();
   }
 
   function resetAll() {

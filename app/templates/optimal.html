@@ -111,6 +111,20 @@
         <div class="sstat" style="text-align:right"><span class="sstat-lbl">Faults so far</span><span class="sstat-val" id="sFaultsSoFar" style="color:var(--text-white)">&mdash;</span></div>
       </div>
       <div class="frames-row" id="framesRow"></div>
+      
+      <!-- DEMAND PAGING VISUALIZATION -->
+      <div style="margin-top:20px;display:flex;gap:20px;">
+        <div style="flex:1;background:var(--bg-body);padding:12px;border:1px solid #1e293b;border-radius:4px;">
+           <div style="font-size:11px;color:var(--accent-cyan);margin-bottom:8px">PAGE TABLE (Valid/Invalid Bits)</div>
+           <div id="pageTableUI" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+        </div>
+        <div style="flex:1;background:var(--bg-body);padding:12px;border:1px solid #1e293b;border-radius:4px;">
+           <div style="font-size:11px;color:#f59e0b;margin-bottom:4px">BACKING STORE (Disk Swap Logs)</div>
+           <div style="font-size:11px;margin-bottom:8px;color:var(--text-dim)">Pages faulting load from disk. Evicted pages swap out.</div>
+           <div id="backingStoreUI" style="display:flex;flex-direction:column;gap:4px;max-height:80px;overflow-y:auto;font-family:monospace;font-size:11px;"></div>
+        </div>
+      </div>
+
       <div class="prog"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
       <div class="ref-lbl">Reference String &mdash; click any step to jump</div>
       <div class="ref-pills" id="refPills"></div>
