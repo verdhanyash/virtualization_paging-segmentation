@@ -2,7 +2,6 @@
 #
 # Simulates segmented memory management:
 #   - Variable-size segments (code, stack, heap, data, etc.)
-#   - 4 allocation strategies: First-Fit, Best-Fit, Worst-Fit, Next-Fit
 #   - Address translation with bounds checking (offset < limit)
 #   - Internal fragmentation (from block-aligned allocation)
 #   - External fragmentation (scattered holes between segments)
@@ -16,7 +15,7 @@
 #   (ceil(200/16) * 16). The extra 8 bytes = internal fragmentation.
 #
 # Usage:
-#   table = SegmentTable(total_memory=4096, strategy="best_fit")
+#   table = SegmentTable(total_memory=4096)
 #   table.add_segment("code", 200)
 #   table.add_segment("stack", 500)
 #   addr = table.translate("code", 50)   # → 50
@@ -104,62 +103,31 @@ class Segment:
 
 class SegmentTable:
     """
-    Manages segmented memory with configurable allocation strategy.
+    Manages segmented memory.
 
-    Strategies:
-        first_fit — Scan left→right, use the FIRST hole that fits.
-                    Fast. Tends to fragment the beginning of memory.
-
-        best_fit  — Use the SMALLEST hole that fits.
-                    Minimizes leftover per allocation.
-                    Creates tiny, often unusable holes.
-
-        worst_fit — Use the LARGEST hole that fits.
-                    Leaves big leftover holes (more reusable).
-                    Wastes space if large allocations come later.
-
-        next_fit  — Like first_fit, but starts scanning from where
-                    the last allocation ended (wraps around).
-                    Spreads allocations across memory.
+    Allocates segments into the first free hole that fits (sequential scan).
 
     Args:
         total_memory: Total physical memory in bytes (default 4096).
-        strategy:     One of "first_fit", "best_fit", "worst_fit", "next_fit".
         block_size:   Alignment granularity in bytes (default 16).
                       All allocations are rounded up to multiples of this.
     """
 
-    VALID_STRATEGIES = ("first_fit", "best_fit", "worst_fit", "next_fit")
-
     def __init__(
         self,
         total_memory: int = 4096,
-        strategy: str = "first_fit",
         block_size: int = 16,
     ) -> None:
         if total_memory <= 0:
             raise ValueError("Total memory must be positive")
-        if strategy not in self.VALID_STRATEGIES:
-            raise ValueError(
-                f"Strategy must be one of {self.VALID_STRATEGIES}, "
-                f"got '{strategy}'"
-            )
         if block_size <= 0:
             raise ValueError("Block size must be positive")
 
         self._total_memory = total_memory
-        self._strategy = strategy
         self._block_size = block_size
         self._segments: Dict[str, Segment] = {}
 
-        # next_fit tracks where the last allocation ended
-        self._next_fit_cursor = 0
-
     # ── Properties ────────────────────────────────────────────
-
-    @property
-    def strategy(self) -> str:
-        return self._strategy
 
     @property
     def total_memory(self) -> int:
@@ -227,7 +195,7 @@ class SegmentTable:
 
     def _find_hole(self, needed: int) -> Optional[Dict]:
         """
-        Select a free hole using the current allocation strategy.
+        Find the first free hole large enough for the requested size.
 
         Args:
             needed: Block-aligned size required.
@@ -242,27 +210,7 @@ class SegmentTable:
         if not fitting:
             return None
 
-        if self._strategy == "first_fit":
-            # First hole that fits (left to right)
-            return fitting[0]
-
-        elif self._strategy == "best_fit":
-            # Smallest fitting hole → minimize leftover
-            return min(fitting, key=lambda h: h["size"])
-
-        elif self._strategy == "worst_fit":
-            # Largest fitting hole → maximize leftover
-            return max(fitting, key=lambda h: h["size"])
-
-        elif self._strategy == "next_fit":
-            # First fitting hole at or after cursor (wrap around)
-            for h in fitting:
-                if h["base"] >= self._next_fit_cursor:
-                    return h
-            # Wrap around: take the first fitting hole from the start
-            return fitting[0]
-
-        return None  # unreachable
+        return fitting[0]
 
     # ── Public API: Allocation ────────────────────────────────
 
@@ -286,7 +234,7 @@ class SegmentTable:
             ValueError: If name exists, size invalid, or no hole fits.
 
         Example:
-            >>> table = SegmentTable(4096, "first_fit", block_size=16)
+            >>> table = SegmentTable(4096, block_size=16)
             >>> seg = table.add_segment("code", 200)
             >>> seg.allocated_size   # 208 (rounded up to 16-byte boundary)
             208
@@ -305,16 +253,11 @@ class SegmentTable:
             total_free = sum(h["size"] for h in self._get_free_holes())
             raise ValueError(
                 f"Cannot allocate '{name}' ({size}B, aligned to {aligned}B). "
-                f"Strategy={self._strategy}. "
                 f"Total free={total_free}B but no single hole fits."
             )
 
         segment = Segment(name, hole["base"], size, aligned)
         self._segments[name] = segment
-
-        # Advance next_fit cursor past this allocation
-        if self._strategy == "next_fit":
-            self._next_fit_cursor = segment.end_address()
 
         return segment
 
@@ -458,8 +401,7 @@ class SegmentTable:
                 })
             current_base += seg.allocated_size
 
-        # Reset next_fit cursor
-        self._next_fit_cursor = current_base
+
 
         return {
             "moves": moves,
@@ -593,7 +535,6 @@ class SegmentTable:
 def simulate_fragmentation(
     operations: List[Dict],
     total_memory: int = 4096,
-    strategy: str = "first_fit",
     block_size: int = 16,
 ) -> List[Dict]:
     """
@@ -609,7 +550,6 @@ def simulate_fragmentation(
             {"action": "free", "name": "code"}
             {"action": "compact"}
         total_memory: Total memory size (default 4096).
-        strategy: Allocation strategy (default "first_fit").
         block_size: Block alignment (default 16).
 
     Returns:
@@ -631,7 +571,7 @@ def simulate_fragmentation(
         ...     {"action": "free", "name": "code"},
         ...     {"action": "compact"},
         ... ]
-        >>> snapshots = simulate_fragmentation(ops, strategy="best_fit")
+        >>> snapshots = simulate_fragmentation(ops)
         >>> for s in snapshots:
         ...     print(s["fragmentation"]["external_frag"])
         0
@@ -639,7 +579,7 @@ def simulate_fragmentation(
         208     # hole left behind by freeing "code"
         0       # compaction removed the hole
     """
-    table = SegmentTable(total_memory, strategy, block_size)
+    table = SegmentTable(total_memory, block_size)
     snapshots: List[Dict] = []
 
     for step, op in enumerate(operations):

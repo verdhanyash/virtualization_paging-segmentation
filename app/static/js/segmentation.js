@@ -2,7 +2,6 @@
    *  STATE
    * ══════════════════════════════════════════════ */
   var state = {
-    strategy: 'first_fit',
     totalMem: 16384,
     blockSize: 64,
     maxProcs: 8,
@@ -10,10 +9,15 @@
     systemInfo: {},
     snapshots: [],
     extraOps: [],
-    loading: false
+    loading: false,
+    translateLog: [],
+    trapCount: 0,
+    histFilter: 'all',
+    previousProcessNames: []
   };
   var livePollInt = null;
   var pendingCustomOps = [];
+  var autoTranslateTimers = [];
 
   function showSegToast(msg, type) {
     var existing = document.getElementById('seg-toast');
@@ -137,8 +141,7 @@
     var useLive = document.getElementById('liveToggleSeg') && document.getElementById('liveToggleSeg').checked;
     
     if (useLive) {
-      var q = 'strategy=' + encodeURIComponent(state.strategy) +
-        '&total_memory=' + state.totalMem +
+      var q = 'total_memory=' + state.totalMem +
         '&block_size=' + state.blockSize +
         '&max_processes=' + state.maxProcs;
 
@@ -153,7 +156,6 @@
     } else {
       var customOps = pendingCustomOps.slice();
       var postData = {
-        strategy: state.strategy,
         total_memory: state.totalMem,
         block_size: state.blockSize,
         operations: customOps
@@ -173,6 +175,15 @@
       if (xhr.status === 200) {
         try {
           var data = JSON.parse(xhr.responseText);
+
+          /* Track previous process names for invalidation */
+          if (state.processes && state.processes.length > 0) {
+            state.previousProcessNames = [];
+            for (var pp = 0; pp < state.processes.length; pp++) {
+              state.previousProcessNames.push(state.processes[pp].name);
+            }
+          }
+
           state.processes = data.processes || [];
           state.systemInfo = data.system || {};
           /* Manual mode returns flat array; live mode returns { simulation: { snapshots: [...] } } */
@@ -197,7 +208,7 @@
           var errData = JSON.parse(xhr.responseText);
           showSegToast(errData.error || 'Unknown error', 'error');
         } catch (_) {
-          showSegToast('Connection error — retrying...', 'error');
+          showSegToast('Connection error \u2014 retrying...', 'error');
         }
         /* Auto-retry on transient failures */
         setTimeout(function() { if (!state.loading) loadLiveData(); }, 3000);
@@ -208,11 +219,11 @@
   function updateButtonState() {
     var btn = document.getElementById('btn-start');
     if (state.loading) {
-      btn.textContent = '⏳ LOADING…';
+      btn.textContent = '\u23f3 LOADING\u2026';
       btn.classList.add('loading');
       btn.disabled = true;
     } else {
-      btn.innerHTML = 'START_SIMULATION <span>▶</span>';
+      btn.innerHTML = 'START_SIMULATION <span>\u25b6</span>';
       btn.classList.remove('loading');
       btn.disabled = false;
     }
@@ -221,26 +232,14 @@
   /* ══════════════════════════════════════════════
    *  ACTIONS
    * ══════════════════════════════════════════════ */
-  function setStrategy(s) {
-    state.strategy = s;
-    document.getElementById('active-strat-lbl').textContent = s.toUpperCase();
-    var tabs = document.querySelectorAll('.strat-btn');
-    for (var i = 0; i < tabs.length; i++) {
-      tabs[i].classList.toggle('on', tabs[i].getAttribute('data-strategy') === s);
-    }
-    if (s === 'best_fit') document.getElementById('ax-lat').textContent = 'O(N)';
-    else document.getElementById('ax-lat').textContent = 'O(N)';
-
-    if (state.processes && state.processes.length > 0) {
-      refreshLive();
-    }
-  }
 
   function startLivePolling() {
     if (livePollInt) clearInterval(livePollInt);
+    var useLive = document.getElementById('liveToggleSeg') && document.getElementById('liveToggleSeg').checked;
+    var interval = useLive ? 5000 : 10000;
     livePollInt = setInterval(function () {
       if (!state.loading) loadLiveData();
-    }, 10000);
+    }, interval);
   }
 
   function stopLivePolling() {
@@ -260,8 +259,11 @@
     if (mp > 0) state.maxProcs = mp;
 
     state.extraOps = [];
+    state.translateLog = [];
+    state.trapCount = 0;
     procColorMap = {};
     procColorIdx = 0;
+    clearAutoTranslateTimers();
     loadLiveData();
     startLivePolling();
   }
@@ -274,12 +276,24 @@
 
   function resetAll() {
     stopLivePolling();
+    clearAutoTranslateTimers();
     state.extraOps = [];
     state.snapshots = [];
     state.processes = [];
+    state.translateLog = [];
+    state.trapCount = 0;
+    state.previousProcessNames = [];
     procColorMap = {};
     procColorIdx = 0;
     renderAll();
+    /* Reset translator */
+    var resultEl = document.getElementById('at-result');
+    if (resultEl) {
+      resultEl.className = 'at-result at-result-empty';
+      resultEl.innerHTML = 'Select a process and offset, then click TRANSLATE';
+    }
+    var trapsEl = document.getElementById('st-traps');
+    if (trapsEl) trapsEl.textContent = '\u2014';
   }
 
   /* ── Config listeners ── */
@@ -305,6 +319,13 @@
     renderSegmentTable(snap);
     renderHolesTable(snap);
     renderHistory();
+    populateTranslatorDropdowns();
+    renderLiveTranslateExample(snap);
+
+    /* Auto-translations after simulation completes */
+    if (snap && snap.segments && Object.keys(snap.segments).length > 0) {
+      runAutoTranslations(snap);
+    }
   }
 
   /* ══════════════════════════════════════════════
@@ -316,7 +337,7 @@
 
     if (!state.processes || state.processes.length === 0) {
       container.innerHTML = '<div class="empty">Click START_SIMULATION to load</div>';
-      badge.textContent = '—';
+      badge.textContent = '\u2014';
       return;
     }
 
@@ -328,9 +349,9 @@
       var memLabel = formatProcessMemory(p.real_mem_kb);
       var segs = Object.keys(p.segments || {}).length;
       var c = getColorForProcess(p.name);
-      var pid = (p.pids && p.pids.length > 0) ? p.pids[0] : '—';
+      var pid = (p.pids && p.pids.length > 0) ? p.pids[0] : '\u2014';
 
-      html += '<div class="proc-card proc-card-compact" style="border-color:' + c.dim + '" title="' + memLabel + ' · ' + segs + ' segments">' +
+      html += '<div class="proc-card proc-card-compact" style="border-color:' + c.dim + '" title="' + memLabel + ' \u00b7 ' + segs + ' segments">' +
         '<div class="proc-card-accent" style="background:' + c.main + '"></div>' +
         '<div class="proc-card-top">' +
           '<div class="proc-name">' + p.name + '</div>' +
@@ -347,7 +368,7 @@
   function renderStats(snap) {
     var ids = ['st-used','st-free','st-int','st-ext','st-holes','st-util'];
     if (!snap || !snap.fragmentation) {
-      for (var i = 0; i < ids.length; i++) document.getElementById(ids[i]).textContent = '—';
+      for (var i = 0; i < ids.length; i++) document.getElementById(ids[i]).textContent = '\u2014';
       return;
     }
     var f = snap.fragmentation;
@@ -395,7 +416,7 @@
     legend.innerHTML = '';
 
     if (!snap || !snap.memory_map || snap.memory_map.length === 0) {
-      bar.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-dimmer);font-size: 9.6px;">No data — click START_SIMULATION</div>';
+      bar.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-dimmer);font-size: 9.6px;">No data \u2014 click START_SIMULATION</div>';
       return;
     }
 
@@ -454,7 +475,7 @@
   }
 
   /* ══════════════════════════════════════════════
-   *  RENDER: Block-Level Memory Map
+   *  RENDER: Block-Level Memory Map (UPGRADED)
    * ══════════════════════════════════════════════ */
   function renderBlockGrid(snap) {
     var container = document.getElementById('memory-grid');
@@ -462,12 +483,12 @@
     container.innerHTML = '';
 
     if (!snap || !snap.memory_map) {
-      countLbl.textContent = '—';
+      countLbl.textContent = '\u2014';
       return;
     }
 
     var totalBlocks = Math.ceil(state.totalMem / state.blockSize);
-    countLbl.textContent = totalBlocks + ' blocks × ' + state.blockSize + 'B';
+    countLbl.textContent = totalBlocks + ' blocks \u00d7 ' + state.blockSize + 'B';
 
     var tooltip = document.getElementById('mem-tooltip');
 
@@ -484,6 +505,12 @@
       }
       var usedBlocks = blocks - intFragBlocks;
 
+      /* Compute limit for this segment from snapshot */
+      var segLimit = 0;
+      if (item.type === 'segment' && snap.segments && snap.segments[item.name]) {
+        segLimit = snap.segments[item.name].limit;
+      }
+
       for (var b = 0; b < blocks; b++) {
         var cell = document.createElement('div');
         cell.className = 'mem-cell';
@@ -497,7 +524,25 @@
           }
           cell.setAttribute('data-proc', parsed.proc);
           cell.setAttribute('data-seg', item.name);
-          cell.setAttribute('data-info', item.name + ' | Base: ' + item.base + ' | Req: ' + (item.requested || item.size) + 'B | Alloc: ' + item.size + 'B | IntFrag: ' + (item.internal_frag || 0) + 'B');
+          var maxOffset = segLimit > 0 ? segLimit - 1 : 0;
+          cell.setAttribute('data-info',
+            item.name + ' | Base: ' + item.base + ' | Req: ' + (item.requested || item.size) +
+            'B | Alloc: ' + item.size + 'B | IntFrag: ' + (item.internal_frag || 0) +
+            'B | Valid offsets: 0\u2013' + maxOffset + ' | TRAP if offset >= ' + segLimit);
+
+          /* Click handler: prefill translator */
+          cell.setAttribute('data-seg-proc', parsed.proc);
+          cell.setAttribute('data-seg-type', parsed.type);
+          cell.setAttribute('data-seg-limit', segLimit);
+          cell.onclick = function() {
+            var proc = this.getAttribute('data-seg-proc');
+            var type = this.getAttribute('data-seg-type');
+            var limit = parseInt(this.getAttribute('data-seg-limit'), 10);
+            if (limit > 0) {
+              prefillTranslator(proc, type, Math.floor(Math.random() * limit));
+            }
+          };
+
         } else if (item.type === 'hole') {
           cell.className += ' mem-cell-hole';
           cell.setAttribute('data-info', 'HOLE | Base: ' + item.base + ' | Size: ' + item.size + 'B');
@@ -525,7 +570,7 @@
   }
 
   /* ══════════════════════════════════════════════
-   *  RENDER: Segment Table
+   *  RENDER: Segment Table (UPGRADED)
    * ══════════════════════════════════════════════ */
   function renderSegmentTable(snap) {
     var emptyEl = document.getElementById('seg-table-empty');
@@ -535,7 +580,7 @@
     if (!snap || !snap.segments || Object.keys(snap.segments).length === 0) {
       emptyEl.style.display = 'block';
       tableEl.style.display = 'none';
-      countLbl.textContent = '—';
+      countLbl.textContent = '\u2014';
       return;
     }
 
@@ -558,32 +603,36 @@
 
       var fragVal = seg.internal_frag || 0;
       var fragClass = fragVal > 0 ? 'color:var(--accent-red); font-weight:600;' : '';
+      var maxOffset = seg.limit > 0 ? seg.limit - 1 : 0;
 
       var isSystem = parsed.proc.toLowerCase().includes('system') || parsed.proc.toLowerCase().includes('svchost') || parsed.proc.toLowerCase().includes('csrss') || parsed.proc.toLowerCase().includes('kernel');
-      var icon = isSystem ? '⚙' : '🏷️';
-      if (parsed.type.includes('.text')) icon = '📝';
-      else if (parsed.type.includes('.data')) icon = '🗃️';
-      else if (parsed.type.includes('.heap')) icon = '📦';
-      else if (parsed.type.includes('.stack')) icon = '📚';
+      var icon = isSystem ? '\u2699' : '\ud83c\udff7\ufe0f';
+      if (parsed.type.includes('.text')) icon = '\ud83d\udcdd';
+      else if (parsed.type.includes('.data')) icon = '\ud83d\uddc3\ufe0f';
+      else if (parsed.type.includes('.heap')) icon = '\ud83d\udce6';
+      else if (parsed.type.includes('.stack')) icon = '\ud83d\udcda';
 
       var div = document.createElement('div');
-      div.className = 'seg-row-card';
-      div.innerHTML = `
-        <div class="seg-row-indicator" style="background:${c.main}"></div>
-        <div class="seg-row-name-col">
-          <div class="seg-icon-box" style="color:${c.main}; border-color:${c.dim}">${icon}</div>
-          <div class="seg-title-wrap">
-             <div class="seg-title">${parsed.proc}</div>
-             <div class="seg-subtitle">PROCESS SEGMENT</div>
-          </div>
-        </div>
-        <div class="seg-val-col" style="color:${c.text}">${parsed.type}</div>
-        <div class="seg-val-col">${seg.base}</div>
-        <div class="seg-val-col">${seg.limit}</div>
-        <div class="seg-hl-col" style="color:${c.main}">${seg.allocated_size}</div>
-        <div class="seg-val-col" style="${fragClass}">${fragVal > 0 ? fragVal : '-'}</div>
-        <div class="action-menu">⋮</div>
-      `;
+      div.className = 'seg-row-card seg-row-card-expanded';
+      div.innerHTML =
+        '<div class="seg-row-indicator" style="background:' + c.main + '"></div>' +
+        '<div class="seg-row-name-col">' +
+          '<div class="seg-icon-box" style="color:' + c.main + '; border-color:' + c.dim + '">' + icon + '</div>' +
+          '<div class="seg-title-wrap">' +
+             '<div class="seg-title">' + parsed.proc + '</div>' +
+             '<div class="seg-subtitle">PROCESS SEGMENT</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="seg-val-col" style="color:' + c.text + '">' + parsed.type + '</div>' +
+        '<div class="seg-val-col">' + seg.base + '</div>' +
+        '<div class="seg-val-col">' + seg.limit + '</div>' +
+        '<div class="seg-hl-col" style="color:' + c.main + '">' + seg.allocated_size + '</div>' +
+        '<div class="seg-val-col" style="' + fragClass + '">' + (fragVal > 0 ? fragVal : '-') + '</div>' +
+        '<div class="seg-val-col">' + maxOffset + '</div>' +
+        '<div class="seg-trap-col">' + seg.limit + '</div>' +
+        '<div style="text-align:center"><button class="btn-test-access" onclick="prefillTranslator(\'' +
+          parsed.proc.replace(/'/g, "\\'") + '\',\'' + parsed.type.replace(/'/g, "\\'") +
+          '\',' + Math.floor(Math.random() * Math.max(1, seg.limit)) + ')">TEST</button></div>';
       tbody.appendChild(div);
     }
   }
@@ -594,7 +643,7 @@
   function renderHolesTable(snap) {
     var emptyEl = document.getElementById('holes-table-empty');
     var tableEl = document.getElementById('holes-table');
-    emptyEl.textContent = 'No holes — memory is contiguous';
+    emptyEl.textContent = 'No holes \u2014 memory is contiguous';
 
     if (!snap || !snap.free_holes || snap.free_holes.length === 0) {
       emptyEl.textContent = 'Run START_SIMULATION to inspect free holes';
@@ -621,7 +670,7 @@
     }
 
     if (realHoles.length === 0) {
-      emptyEl.textContent = 'No holes — memory is contiguous';
+      emptyEl.textContent = 'No holes \u2014 memory is contiguous';
       emptyEl.style.display = 'block';
       tableEl.style.display = 'none';
       return;
@@ -649,16 +698,18 @@
   }
 
   /* ══════════════════════════════════════════════
-   *  RENDER: Operation History
+   *  RENDER: Operation History (UPGRADED)
    * ══════════════════════════════════════════════ */
   function renderHistory() {
     var histLog = document.getElementById('history-log');
     var histEmpty = document.getElementById('hist-empty');
     var countLbl = document.getElementById('ops-count-lbl');
 
-    if (!state.snapshots || state.snapshots.length === 0) {
+    var totalEntries = (state.snapshots ? state.snapshots.length : 0) + state.translateLog.length;
+
+    if (totalEntries === 0) {
       histEmpty.style.display = 'block';
-      countLbl.textContent = '—';
+      countLbl.textContent = '\u2014';
       /* clear old rows */
       var old = histLog.querySelectorAll('.hist-row');
       for (var x = 0; x < old.length; x++) old[x].remove();
@@ -666,22 +717,27 @@
     }
 
     histEmpty.style.display = 'none';
-    countLbl.textContent = state.snapshots.length + ' ops';
+    countLbl.textContent = totalEntries + ' ops';
 
     /* Clear existing rows */
     var existing = histLog.querySelectorAll('.hist-row');
     for (var y = 0; y < existing.length; y++) existing[y].remove();
 
+    var rowNum = 0;
+
+    /* Alloc/free/compact operations from snapshots */
     for (var i = 0; i < state.snapshots.length; i++) {
       var snap = state.snapshots[i];
       var op = snap.operation;
       if (!op) continue;
+      rowNum++;
 
       var isOk = (snap.error === null || snap.error === undefined);
       var parsed = parseSegName(op.name || '');
 
       /* Format operation text */
       var opText = '';
+      var rowType = op.action; /* alloc, free, compact */
       if (op.action === 'alloc') {
         opText = '<span class="h-action">alloc</span> <span class="h-proc">' + parsed.proc + '</span>' +
                  '<span class="h-type">' + parsed.type + '</span> <span class="h-size">(' + (op.size || '?') + 'B)</span>';
@@ -695,13 +751,14 @@
       }
 
       var statusText = isOk
-        ? '<span style="color:var(--accent-green)">✓ OK</span>'
-        : '<span style="color:var(--accent-red)">✗ ERR</span>';
+        ? '<span style="color:var(--accent-green)">\u2713 OK</span>'
+        : '<span style="color:var(--accent-red)">\u2717 ERR</span>';
 
       var row = document.createElement('div');
       row.className = 'hist-row ' + (isOk ? 'hist-ok' : 'hist-err');
+      row.setAttribute('data-type', rowType);
       row.innerHTML =
-        '<div class="h-num">#' + (i + 1) + '</div>' +
+        '<div class="h-num">#' + rowNum + '</div>' +
         '<div class="h-op">' + opText + '</div>' +
         '<div class="h-status">' + statusText + '</div>';
 
@@ -712,8 +769,324 @@
       histLog.appendChild(row);
     }
 
+    /* Translate log entries */
+    for (var t = 0; t < state.translateLog.length; t++) {
+      var entry = state.translateLog[t];
+      rowNum++;
+
+      var trText = '<span class="h-action">translate</span> <span class="h-proc">' +
+        entry.proc + '</span><span class="h-type">' + entry.type + '</span> ' +
+        '<span class="h-size">offset=' + entry.offset + '</span>';
+
+      var trStatus;
+      var trClass;
+      if (entry.isTrap) {
+        trStatus = '<span style="color:var(--accent-red)">\u2717 TRAP</span>';
+        trText += ' \u2192 <span style="color:var(--accent-red)">offset >= ' + entry.limit + '</span>';
+        trClass = 'hist-row hist-trap';
+      } else {
+        trStatus = '<span style="color:var(--accent-green)">\u2713 VALID</span>';
+        trText += ' \u2192 <span style="color:var(--accent-green)">PA=' + entry.pa + '</span>';
+        trClass = 'hist-row hist-translate';
+      }
+
+      var trow = document.createElement('div');
+      trow.className = trClass;
+      trow.setAttribute('data-type', entry.isTrap ? 'trap' : 'translate');
+      trow.innerHTML =
+        '<div class="h-num">#' + rowNum + '</div>' +
+        '<div class="h-op">' + trText + '</div>' +
+        '<div class="h-status">' + trStatus + '</div>';
+      histLog.appendChild(trow);
+    }
+
+    /* Apply current filter */
+    applyHistFilter();
+
     /* Auto-scroll to bottom */
     histLog.scrollTop = histLog.scrollHeight;
+  }
+
+  /* ── History Filtering ── */
+  function setHistFilter(filter) {
+    state.histFilter = filter;
+    var btns = document.querySelectorAll('.hist-filter');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', btns[i].getAttribute('data-filter') === filter);
+    }
+    applyHistFilter();
+  }
+
+  function applyHistFilter() {
+    var rows = document.querySelectorAll('#history-log .hist-row');
+    var filter = state.histFilter;
+    for (var i = 0; i < rows.length; i++) {
+      var type = rows[i].getAttribute('data-type');
+      if (filter === 'all') {
+        rows[i].style.display = '';
+      } else if (filter === 'alloc') {
+        rows[i].style.display = (type === 'alloc' || type === 'free') ? '' : 'none';
+      } else {
+        rows[i].style.display = (type === filter) ? '' : 'none';
+      }
+    }
+  }
+
+  /* ══════════════════════════════════════════════
+   *  ADDRESS TRANSLATOR
+   * ══════════════════════════════════════════════ */
+  function populateTranslatorDropdowns() {
+    var procSelect = document.getElementById('at-proc');
+    if (!procSelect) return;
+
+    var currentVal = procSelect.value;
+    procSelect.innerHTML = '';
+
+    if (!state.processes || state.processes.length === 0) {
+      procSelect.innerHTML = '<option value="">\u2014 run simulation first \u2014</option>';
+      return;
+    }
+
+    var snap = state.snapshots.length > 0 ? state.snapshots[state.snapshots.length - 1] : null;
+
+    for (var i = 0; i < state.processes.length; i++) {
+      var p = state.processes[i];
+      var pid = (p.pids && p.pids.length > 0) ? p.pids[0] : '';
+      var opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = p.name + (pid ? ' PID:' + pid : '');
+
+      /* Check if process still has segments */
+      if (snap && snap.segments) {
+        var hasSegs = false;
+        var segNames = Object.keys(snap.segments);
+        for (var s = 0; s < segNames.length; s++) {
+          if (segNames[s].indexOf(p.name) === 0) { hasSegs = true; break; }
+        }
+        if (!hasSegs) {
+          opt.textContent += ' [NO SEGMENTS]';
+          opt.disabled = true;
+        }
+      }
+
+      procSelect.appendChild(opt);
+    }
+
+    /* Restore selection if still valid */
+    if (currentVal) procSelect.value = currentVal;
+  }
+
+  function handleTranslateClick() {
+    var proc = document.getElementById('at-proc').value;
+    var type = document.getElementById('at-type').value;
+    var offset = parseInt(document.getElementById('at-offset').value, 10);
+
+    if (!proc) {
+      showSegToast('Select a process first', 'error');
+      return;
+    }
+    if (isNaN(offset) || offset < 0) {
+      showSegToast('Offset must be a non-negative integer', 'error');
+      return;
+    }
+
+    doTranslate(proc, type, offset, true);
+  }
+
+  function doTranslate(proc, type, offset, animate) {
+    var snap = state.snapshots.length > 0 ? state.snapshots[state.snapshots.length - 1] : null;
+    if (!snap || !snap.segments) {
+      showSegToast('No simulation data available', 'error');
+      return null;
+    }
+
+    var segName = proc + type;
+    var seg = snap.segments[segName];
+    var resultEl = document.getElementById('at-result');
+
+    if (!seg) {
+      /* Segment not found */
+      var result = { proc: proc, type: type, offset: offset, isTrap: true, reason: 'not_found', limit: 0, pa: 0 };
+      resultEl.className = 'at-result at-result-trap';
+      resultEl.innerHTML =
+        '<div class="at-step"><span class="at-step-num">Step 1</span><span class="at-step-detail">Logical Address = (<span class="at-seg">' + segName + '</span>, <span class="at-val">' + offset + '</span>)</span></div>' +
+        '<div class="at-step"><span class="at-step-num">Step 2</span><span class="at-step-detail">Segment <span class="at-seg">' + segName + '</span> <span class="at-err">NOT FOUND</span> in segment table</span></div>' +
+        '<div class="at-final at-final-trap">\u26a0 TRAP \u2014 SEGMENTATION FAULT: segment does not exist</div>';
+
+      state.translateLog.push(result);
+      state.trapCount++;
+      updateTrapStat();
+      renderHistory();
+      return result;
+    }
+
+    var base = seg.base;
+    var limit = seg.limit;
+    var isTrap = offset >= limit;
+
+    var result = { proc: proc, type: type, offset: offset, isTrap: isTrap, limit: limit, base: base, pa: isTrap ? 0 : base + offset };
+
+    if (isTrap) {
+      resultEl.className = 'at-result at-result-trap';
+      resultEl.innerHTML =
+        '<div class="at-step"><span class="at-step-num">Step 1</span><span class="at-step-detail">Logical Address = (<span class="at-seg">' + segName + '</span>, <span class="at-val">' + offset + '</span>)</span></div>' +
+        '<div class="at-step"><span class="at-step-num">Step 2</span><span class="at-step-detail">Lookup: Base = <span class="at-val">' + base + '</span>, Limit = <span class="at-val">' + limit + '</span></span></div>' +
+        '<div class="at-step"><span class="at-step-num">Step 3</span><span class="at-step-detail">Check: offset <span class="at-val">' + offset + '</span> >= Limit <span class="at-val">' + limit + '</span> \u2192 <span class="at-err">TRAP RAISED</span></span></div>' +
+        '<div class="at-final at-final-trap">\u26a0 TRAP \u2014 SEGMENTATION FAULT: offset exceeds segment limit</div>';
+      state.trapCount++;
+    } else {
+      var pa = base + offset;
+      resultEl.className = 'at-result at-result-valid';
+      resultEl.innerHTML =
+        '<div class="at-step"><span class="at-step-num">Step 1</span><span class="at-step-detail">Logical Address = (<span class="at-seg">' + segName + '</span>, <span class="at-val">' + offset + '</span>)</span></div>' +
+        '<div class="at-step"><span class="at-step-num">Step 2</span><span class="at-step-detail">Lookup: Base = <span class="at-val">' + base + '</span>, Limit = <span class="at-val">' + limit + '</span></span></div>' +
+        '<div class="at-step"><span class="at-step-num">Step 3</span><span class="at-step-detail">Check: offset <span class="at-val">' + offset + '</span> < Limit <span class="at-val">' + limit + '</span> \u2192 <span class="at-ok">VALID</span></span></div>' +
+        '<div class="at-step"><span class="at-step-num">Result</span><span class="at-step-detail">Physical Address = <span class="at-val">' + base + '</span> + <span class="at-val">' + offset + '</span> = <span class="at-ok">' + pa + '</span></span></div>' +
+        '<div class="at-final at-final-valid">\u2713 VALID \u2014 Physical Address: ' + pa + '</div>';
+    }
+
+    /* Log and update */
+    state.translateLog.push(result);
+    updateTrapStat();
+    renderHistory();
+
+    /* Animate memory grid blocks */
+    if (animate) {
+      highlightMemoryBlocks(segName, isTrap);
+    }
+
+    return result;
+  }
+
+  function updateTrapStat() {
+    var el = document.getElementById('st-traps');
+    if (el) el.textContent = state.trapCount;
+  }
+
+  function highlightMemoryBlocks(segName, isTrap) {
+    var cells = document.querySelectorAll('#memory-grid .mem-cell[data-seg="' + segName + '"]');
+    var flashClass = isTrap ? 'flash-red' : 'flash-green';
+    for (var i = 0; i < cells.length; i++) {
+      cells[i].classList.remove('flash-green', 'flash-red');
+      /* Force reflow to restart animation */
+      void cells[i].offsetWidth;
+      cells[i].classList.add(flashClass);
+    }
+    /* Remove class after animation */
+    setTimeout(function() {
+      for (var j = 0; j < cells.length; j++) {
+        cells[j].classList.remove(flashClass);
+      }
+    }, 1300);
+  }
+
+  function prefillTranslator(proc, type, offset) {
+    var procSelect = document.getElementById('at-proc');
+    var typeSelect = document.getElementById('at-type');
+    var offsetInput = document.getElementById('at-offset');
+
+    if (procSelect) procSelect.value = proc;
+    if (typeSelect) typeSelect.value = type;
+    if (offsetInput) offsetInput.value = offset;
+
+    /* Scroll to translator panel */
+    var panel = document.getElementById('at-panel');
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    /* Auto-translate */
+    setTimeout(function() { doTranslate(proc, type, offset, true); }, 300);
+  }
+
+  /* ══════════════════════════════════════════════
+   *  AUTO-TRANSLATIONS (after simulation)
+   * ══════════════════════════════════════════════ */
+  function clearAutoTranslateTimers() {
+    for (var i = 0; i < autoTranslateTimers.length; i++) {
+      clearTimeout(autoTranslateTimers[i]);
+    }
+    autoTranslateTimers = [];
+  }
+
+  function runAutoTranslations(snap) {
+    clearAutoTranslateTimers();
+    if (!snap || !snap.segments) return;
+
+    var segNames = Object.keys(snap.segments);
+    if (segNames.length === 0) return;
+
+    var translations = [];
+
+    /* Generate 7 valid + 3 trap translations */
+    for (var v = 0; v < 7; v++) {
+      var sn = segNames[Math.floor(Math.random() * segNames.length)];
+      var seg = snap.segments[sn];
+      var parsed = parseSegName(sn);
+      var validOffset = Math.floor(Math.random() * Math.max(1, seg.limit));
+      translations.push({ proc: parsed.proc, type: parsed.type, offset: validOffset });
+    }
+
+    for (var tr = 0; tr < 3; tr++) {
+      var sn2 = segNames[Math.floor(Math.random() * segNames.length)];
+      var seg2 = snap.segments[sn2];
+      var parsed2 = parseSegName(sn2);
+      var trapOffset = seg2.limit + Math.floor(Math.random() * 100) + 1;
+      translations.push({ proc: parsed2.proc, type: parsed2.type, offset: trapOffset });
+    }
+
+    /* Shuffle for natural feel */
+    for (var sh = translations.length - 1; sh > 0; sh--) {
+      var ri = Math.floor(Math.random() * (sh + 1));
+      var tmp = translations[sh];
+      translations[sh] = translations[ri];
+      translations[ri] = tmp;
+    }
+
+    /* Schedule with 800ms delays */
+    for (var idx = 0; idx < translations.length; idx++) {
+      (function(entry, delay) {
+        var timer = setTimeout(function() {
+          /* Update inputs to show current translation */
+          var procSelect = document.getElementById('at-proc');
+          var typeSelect = document.getElementById('at-type');
+          var offsetInput = document.getElementById('at-offset');
+          if (procSelect) procSelect.value = entry.proc;
+          if (typeSelect) typeSelect.value = entry.type;
+          if (offsetInput) offsetInput.value = entry.offset;
+          doTranslate(entry.proc, entry.type, entry.offset, true);
+        }, delay);
+        autoTranslateTimers.push(timer);
+      })(translations[idx], (idx + 1) * 800);
+    }
+  }
+
+  /* ══════════════════════════════════════════════
+   *  LIVE TRANSLATE EXAMPLE (Dynamics section)
+   * ══════════════════════════════════════════════ */
+  function renderLiveTranslateExample(snap) {
+    var el = document.getElementById('at-live-example');
+    if (!el) return;
+
+    if (!snap || !snap.segments || Object.keys(snap.segments).length === 0) {
+      el.style.display = 'none';
+      return;
+    }
+
+    var segNames = Object.keys(snap.segments);
+    var sn = segNames[0];
+    var seg = snap.segments[sn];
+    var parsed = parseSegName(sn);
+    var base = seg.base;
+    var limit = seg.limit;
+    var validOff = Math.min(Math.floor(limit / 2), limit - 1);
+    var trapOff = limit + 42;
+    var pa = base + validOff;
+
+    el.style.display = 'block';
+    el.innerHTML =
+      '<div style="margin-bottom:6px;color:var(--text-white);font-weight:600;">Live Example:</div>' +
+      '<div><span class="ex-val">' + sn + '</span> \u2192 Base=<span class="ex-val">' + base + '</span>, Limit=<span class="ex-val">' + limit + '</span></div>' +
+      '<div>translate(' + sn + ', ' + validOff + ') \u2192 PA = ' + base + ' + ' + validOff + ' = <span class="ex-ok">' + pa + ' \u2713</span></div>' +
+      '<div>translate(' + sn + ', ' + trapOff + ') \u2192 ' + trapOff + ' >= ' + limit + ' \u2192 <span class="ex-err">TRAP \u2717</span></div>';
   }
 
   /* ══════════════════════════════════════════════

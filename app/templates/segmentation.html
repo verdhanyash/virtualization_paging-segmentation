@@ -58,22 +58,7 @@
             <div class="legend-row" id="comp-legend"></div>
           </div>
 
-          <!-- ALLOCATION STRATEGIES -->
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">ALLOCATION STRATEGIES</div>
-              <div class="panel-meta">ACTIVE_MODE: <span style="color:var(--text-white)" id="active-strat-lbl">FIRST_FIT</span></div>
-            </div>
-            <div class="strat-grid" id="strategy-tabs">
-              <button class="strat-btn on" data-strategy="first_fit" onclick="setStrategy('first_fit')"><span class="strat-num">01</span><span class="strat-lbl">FIRST_FIT</span></button>
-              <button class="strat-btn" data-strategy="best_fit" onclick="setStrategy('best_fit')"><span class="strat-num">02</span><span class="strat-lbl">BEST_FIT</span></button>
-              <button class="strat-btn" data-strategy="worst_fit" onclick="setStrategy('worst_fit')"><span class="strat-num">03</span><span class="strat-lbl">WORST_FIT</span></button>
-              <button class="strat-btn" data-strategy="next_fit" onclick="setStrategy('next_fit')"><span class="strat-num">04</span><span class="strat-lbl">NEXT_FIT</span></button>
-            </div>
-            <div style="margin-top:12px;padding:10px 14px;background:var(--bg-card);border-left:2px solid var(--accent-cyan);font-size: 9.6px;color:var(--text-dim);line-height:1.6;">
-              <span style="color:var(--accent-cyan)">NOTE:</span> Strategies only differ when there are <strong style="color:var(--text-white)">holes</strong> (gaps from freed segments). From empty memory, all strategies produce the same result.
-            </div>
-          </div>
+
 
           <!-- CONTROLS ROW -->
           <div class="panel" style="padding:16px 24px;">
@@ -145,13 +130,43 @@
       <!-- end main grid -->
 
       <!-- ═══ STATS ROW ═══ -->
-      <div class="stats-row" id="stats-grid">
+      <div class="stats-row stats-row-7" id="stats-grid">
         <div class="sc"><div class="sc-lbl">In Use</div><div class="sc-val" id="st-used">—</div></div>
         <div class="sc"><div class="sc-lbl">Available</div><div class="sc-val" id="st-free">—</div></div>
         <div class="sc"><div class="sc-lbl">Internal Frag</div><div class="sc-val" id="st-int">—</div></div>
         <div class="sc"><div class="sc-lbl">External Frag</div><div class="sc-val" id="st-ext">—</div></div>
         <div class="sc"><div class="sc-lbl">Holes</div><div class="sc-val" id="st-holes">—</div></div>
         <div class="sc"><div class="sc-lbl">Utilization</div><div class="sc-val" id="st-util">—</div></div>
+        <div class="sc"><div class="sc-lbl">Traps Caught</div><div class="sc-val sc-err" id="st-traps">—</div></div>
+      </div>
+
+      <!-- ═══ ADDRESS TRANSLATOR ═══ -->
+      <div class="panel" id="at-panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="panel-title-icon">⚡</span> ADDRESS TRANSLATOR</div>
+          <div class="panel-meta">LOGICAL → PHYSICAL</div>
+        </div>
+        <div class="at-controls">
+          <div class="field">
+            <span class="lbl">Process</span>
+            <select id="at-proc"><option value="">— run simulation first —</option></select>
+          </div>
+          <div class="field">
+            <span class="lbl">Segment Type</span>
+            <select id="at-type">
+              <option value=".text">.text</option>
+              <option value=".data">.data</option>
+              <option value=".heap">.heap</option>
+              <option value=".stack">.stack</option>
+            </select>
+          </div>
+          <div class="field">
+            <span class="lbl">Offset (d)</span>
+            <input type="number" id="at-offset" value="0" min="0">
+          </div>
+          <button class="btn-translate" onclick="handleTranslateClick()">TRANSLATE</button>
+        </div>
+        <div id="at-result" class="at-result at-result-empty">Select a process and offset, then click TRANSLATE</div>
       </div>
 
       <!-- ═══ BLOCK-LEVEL MEMORY MAP ═══ -->
@@ -169,14 +184,16 @@
           <div id="seg-table-wrap">
             <div class="empty" id="seg-table-empty">No segments allocated</div>
             <div id="segment-table" style="display:none; flex-direction:column;">
-              <div class="seg-list-header">
+              <div class="seg-list-header seg-list-header-expanded">
                 <div>PROCESS</div>
                 <div>TYPE</div>
                 <div>BASE</div>
                 <div>LIMIT</div>
                 <div>ALLOCATED</div>
                 <div>INT.FRAG</div>
-                <div></div>
+                <div>MAX OFFSET</div>
+                <div style="color:var(--accent-warning)">TRAP @</div>
+                <div>ACTION</div>
               </div>
               <div id="segment-tbody"></div>
             </div>
@@ -197,6 +214,13 @@
       <!-- ═══ OPERATION HISTORY ═══ -->
       <div class="panel">
         <div class="panel-header"><div class="panel-title">OPERATION HISTORY</div><div class="panel-meta" id="ops-count-lbl">—</div></div>
+        <div class="hist-filter-bar" id="hist-filter-bar">
+          <button class="hist-filter on" data-filter="all" onclick="setHistFilter('all')">ALL</button>
+          <button class="hist-filter" data-filter="alloc" onclick="setHistFilter('alloc')">ALLOC</button>
+          <button class="hist-filter" data-filter="translate" onclick="setHistFilter('translate')">TRANSLATE</button>
+          <button class="hist-filter" data-filter="trap" onclick="setHistFilter('trap')">TRAP</button>
+          <button class="hist-filter" data-filter="compact" onclick="setHistFilter('compact')">COMPACT</button>
+        </div>
         <div class="hist-scroll" id="history-log">
           <div class="empty" id="hist-empty">Run operations to see history</div>
         </div>
@@ -213,12 +237,23 @@
           <div class="dyn-text">
             Our simulator employs a <strong>Variable Partitioning</strong> model. As processes are loaded and removed, "holes" of free memory are created, leading to External Fragmentation.
           </div>
+          <!-- ADDRESS TRANSLATION MECHANICS -->
+          <div class="at-mechanics">
+            <div class="at-mech-title">ADDRESS TRANSLATION MECHANICS</div>
+            <div class="at-mech-row"><strong>Logical Address:</strong> A two-part tuple <code>[segment number | offset]</code> where the segment number indexes into the Segment Table and the offset is the byte position within that segment.</div>
+            <div class="at-mech-row"><strong>Hardware Check:</strong> The MMU extracts <code>Base</code> and <code>Limit</code> from the segment table entry. If <code>offset &lt; Limit</code>, the Physical Address = <code>Base + offset</code>. Otherwise, a TRAP is raised.</div>
+            <div class="at-mech-row"><strong>On TRAP:</strong> The CPU raises an interrupt → the OS receives a segmentation fault signal → the offending process is typically terminated or a signal handler is invoked.</div>
+            <div id="at-live-example" class="at-live-example" style="display:none;"></div>
+          </div>
         </div>
         <div class="algo-complex">
           <div class="ac-title">ALGORITHM_COMPLEXITY</div>
-          <div class="ac-row"><span class="ac-lbl">BEST-FIT SEARCH:</span><span class="ac-val" id="ax-lat">O(N)</span></div>
+          <div class="ac-row"><span class="ac-lbl">HOLE SEARCH:</span><span class="ac-val" id="ax-lat">O(N)</span></div>
           <div class="ac-row"><span class="ac-lbl">COMPACTION LATENCY:</span><span class="ac-warn">HIGH</span></div>
           <div class="ac-row"><span class="ac-lbl">ADDRESS TRANSLATION:</span><span class="ac-val">&lt; 12MS</span></div>
+          <div class="ac-row"><span class="ac-lbl">TRAP DETECTION:</span><span class="ac-val">O(1)</span></div>
+          <div class="ac-row"><span class="ac-lbl">OFFSET VALIDATION:</span><span class="ac-val">&lt; 1NS (HARDWARE)</span></div>
+          <div class="ac-row"><span class="ac-lbl">SEGMENT LOOKUP:</span><span class="ac-val">O(1) VIA TABLE INDEX</span></div>
         </div>
       </div>
 

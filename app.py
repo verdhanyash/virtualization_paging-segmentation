@@ -11,7 +11,6 @@ from core.optimal import run_optimal
 flask_app = Flask(__name__, template_folder='app/templates', static_folder='app/static', static_url_path='/static')
 
 VALID_ALGOS = {'FIFO', 'LRU', 'Optimal'}
-VALID_SEGMENTATION_STRATEGIES = {'first_fit', 'best_fit', 'worst_fit', 'next_fit'}
 
 
 
@@ -376,10 +375,6 @@ def realtime_algorithms_api():
 
         operations_json = request.args.get('operations')
         if operations_json or live_mode:
-            strategy = request.args.get('strategy', 'first_fit')
-            if strategy not in VALID_SEGMENTATION_STRATEGIES:
-                raise ValueError('Invalid strategy')
-
             if operations_json:
                 operations = json.loads(operations_json)
             else:
@@ -396,13 +391,11 @@ def realtime_algorithms_api():
 
             snapshots = simulate_fragmentation(
                 operations=operations,
-                strategy=strategy,
                 total_memory=total_memory,
                 block_size=block_size
             )
 
             payload['segmentation'] = {
-                'strategy': strategy,
                 'total_memory': total_memory,
                 'block_size': block_size,
                 'live': live_mode,
@@ -463,14 +456,8 @@ def segmentation_api():
             return jsonify({'error': 'Missing request body'}), 400
 
         operations = data.get('operations')
-        strategy = data.get('strategy')
         total_memory = data.get('total_memory', 4096)
         block_size = data.get('block_size', 16)
-
-        # Validate strategy
-        valid_strategies = ['first_fit', 'best_fit', 'worst_fit', 'next_fit']
-        if strategy not in valid_strategies:
-            return jsonify({'error': 'Invalid strategy'}), 400
 
         # Validate operations
         if not isinstance(operations, list):
@@ -479,7 +466,6 @@ def segmentation_api():
         # Call core segmentation logic
         result = simulate_fragmentation(
             operations=operations,
-            strategy=strategy,
             total_memory=total_memory,
             block_size=block_size
         )
@@ -497,10 +483,6 @@ def segmentation_api():
 def live_segmentation_api():
     """Segmentation simulation driven by real Windows process data."""
     try:
-        strategy = request.args.get('strategy', 'first_fit')
-        if strategy not in VALID_SEGMENTATION_STRATEGIES:
-            raise ValueError('Invalid segmentation strategy')
-
         total_memory = int(request.args.get('total_memory', 16384))
         block_size = int(request.args.get('block_size', 64))
         max_procs = min(int(request.args.get('max_processes', 8)), 12)
@@ -575,7 +557,6 @@ def live_segmentation_api():
         snapshots = simulate_fragmentation(
             operations=operations,
             total_memory=total_memory,
-            strategy=strategy,
             block_size=block_size,
         )
 
@@ -588,7 +569,6 @@ def live_segmentation_api():
                 'total_real_mem_mb': round(total_real_kb / 1024, 1),
             },
             'simulation': {
-                'strategy': strategy,
                 'total_memory': total_memory,
                 'block_size': block_size,
                 'operations': operations,
@@ -604,107 +584,6 @@ def live_segmentation_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-@flask_app.route('/api/live-seg-compare', methods=['GET'])
-def live_seg_compare_api():
-    """
-    Run the SAME operations across all 4 segmentation strategies using
-    real Windows process data.  The operation sequence is designed to
-    create multiple holes of different sizes so the strategies diverge.
-    """
-    try:
-        total_memory = int(request.args.get('total_memory', 4096))
-        block_size = int(request.args.get('block_size', 16))
-
-        # --- Fetch real Windows processes ---
-        raw = _get_windows_process_snapshot(limit=96)
-        if not raw:
-            raise ValueError('Cannot retrieve Windows process snapshot')
-
-        # Group by base process name
-        groups = {}
-        for p in raw:
-            base_name = p['name'].replace('.exe', '').strip()
-            if not base_name:
-                continue
-            if base_name not in groups:
-                groups[base_name] = {'name': base_name, 'mem_kb': 0, 'cpu': 0}
-            groups[base_name]['mem_kb'] += p['mem_kb']
-            groups[base_name]['cpu'] += p.get('cpu', 0)
-
-        top = sorted(groups.values(), key=lambda g: g['mem_kb'], reverse=True)[:8]
-        if len(top) < 3:
-            raise ValueError('Not enough processes for comparison')
-
-        total_real_kb = sum(g['mem_kb'] for g in top) or 1
-
-        # --- Build operations that create multiple different-sized holes ---
-        # Phase 1: Allocate all processes proportionally
-        operations = []
-        alloc_names = []
-        target_used = total_memory * 0.80
-        proc_info = []
-
-        for i, gp in enumerate(top):
-            proportion = gp['mem_kb'] / total_real_kb
-            seg_size = max(block_size * 2, int(target_used * proportion))
-            name = gp['name']
-            operations.append({'action': 'alloc', 'name': name, 'size': seg_size})
-            alloc_names.append(name)
-            proc_info.append({
-                'name': name,
-                'mem_kb': gp['mem_kb'],
-                'cpu': gp['cpu'],
-                'seg_size': seg_size
-            })
-
-        # Phase 2: Free ALTERNATING processes to create holes of different sizes
-        # This is the key: freeing every other process creates multiple holes
-        # of varying sizes, which is exactly what makes strategies diverge.
-        freed = []
-        for i in range(0, len(alloc_names), 2):
-            operations.append({'action': 'free', 'name': alloc_names[i]})
-            freed.append(alloc_names[i])
-
-        # Phase 3: Allocate 2 new small segments that must pick among the holes
-        # These sizes are chosen to be smaller than the freed holes so there
-        # are multiple valid placements — each strategy picks differently.
-        if freed:
-            small1 = max(block_size, proc_info[0]['seg_size'] // 3)
-            small2 = max(block_size, proc_info[0]['seg_size'] // 5)
-            operations.append({'action': 'alloc', 'name': 'NEW_A', 'size': small1})
-            operations.append({'action': 'alloc', 'name': 'NEW_B', 'size': small2})
-
-        # --- Run all 4 strategies on the SAME operations ---
-        strategies = ['first_fit', 'best_fit', 'worst_fit', 'next_fit']
-        results = {}
-        for strat in strategies:
-            snapshots = simulate_fragmentation(
-                operations=operations,
-                strategy=strat,
-                total_memory=total_memory,
-                block_size=block_size
-            )
-            final = snapshots[-1] if snapshots else None
-            results[strat] = {
-                'snapshots': snapshots,
-                'final': final,
-                'fragmentation': final['fragmentation'] if final else None,
-            }
-
-        return jsonify({
-            'strategies': results,
-            'operations': operations,
-            'total_memory': total_memory,
-            'block_size': block_size,
-            'process_source': proc_info,
-            'timestamp': _get_realtime_date_payload(),
-        })
-
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 
 # Expose 'app' for Vercel serverless deployment

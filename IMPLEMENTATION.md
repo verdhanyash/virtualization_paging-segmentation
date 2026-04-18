@@ -27,7 +27,6 @@ This project is a **real-time virtual memory management simulator** built with F
 │  ┌──────────────────────────────────────────┐                       │
 │  │  /api/realtime-algorithms                │  ← paging endpoint    │
 │  │  /api/live-segmentation                  │  ← seg endpoint       │
-│  │  /api/live-seg-compare                   │  ← seg compare        │
 │  │  /api/realtime-date                      │  ← live clock         │
 │  └──────────────┬───────────────────────────┘                       │
 │                 │                                                    │
@@ -58,7 +57,6 @@ The landing page provides a bird's-eye summary of all modules.
 | **Quick Compare — All Algorithms** | Side-by-side comparison of FIFO vs LRU vs Optimal on the same reference string. Shows fault count cards, a grouped bar chart (Faults vs Hits), and highlights the best-performing algorithm with a green border. |
 | **Bélady's Anomaly Chart** | Line chart plotting FIFO fault count vs frame count (1–10). Red dots mark anomaly points where more frames cause more faults. A pulsing "Anomaly Detected" badge appears when found. |
 | **Cumulative Fault Race** | Three-line overlay chart showing how faults accumulate step-by-step for all three algorithms simultaneously. |
-| **Segmentation Strategy Comparison** | Live comparison of First-Fit, Best-Fit, Worst-Fit, and Next-Fit strategies using real process data. Shows external fragmentation (bytes) and memory utilization (%) as bar charts. Strategy cards show internal/external fragmentation, utilization, and mark the best strategy. |
 | **Key Concepts** | Educational callout boxes explaining Page Fault, Bélady's Anomaly, and External Fragmentation. |
 | **Live Clock** | Top-right badge showing real-time system date/time, updated every 30 seconds. |
 
@@ -121,7 +119,6 @@ Dedicated deep-dive into **variable-size memory allocation and fragmentation**.
 | Section | What It Shows |
 |---------|--------------|
 | **Live Address Space** | Full-width composition bar showing the entire memory layout. Each segment is color-coded by process, with tooltips showing segment name and size. Holes are shown with a hatched red pattern. A color legend identifies all processes. |
-| **Allocation Strategies** | Four selectable strategy buttons: First-Fit (01), Best-Fit (02), Worst-Fit (03), Next-Fit (04). Selecting a strategy re-runs the simulation with the chosen algorithm. An informational note explains that strategies only differ when holes exist. |
 | **Configuration** | Total Memory (bytes), Block Size (bytes), Max Processes — all configurable. A toggle switches between Live Windows Telemetry and Manual Custom Operations. |
 | **Custom Operations Builder** | (Manual mode only) Form to build a sequence of alloc/free/compact operations with process names and sizes. Operations appear as a live queue with remove buttons. |
 | **Execution Engine** | START_SIMULATION button triggers the API call. COMPACT MEMORY button triggers compaction. RESET clears everything. |
@@ -188,12 +185,7 @@ Reference String: [5, 4, 4, 4, 1, 1, 9, 3, 1, 1, 6, 1]
 
 ### Segmentation (core/segmentation.py)
 
-| Strategy | How It Selects a Hole |
-|----------|----------------------|
-| First-Fit | Scans holes from the start, picks the **first** hole large enough. |
-| Best-Fit | Scans all holes, picks the **smallest** hole that fits (minimizes leftover). |
-| Worst-Fit | Scans all holes, picks the **largest** hole (maximizes leftover for future use). |
-| Next-Fit | Like First-Fit, but resumes scanning from the last allocation point instead of the start. |
+The segmentation engine allocates segments into the **first free hole** that is large enough (sequential left-to-right scan).
 
 Additional features:
 - **Compaction**: Slides all segments to the left, merging all free space into one contiguous block at the end.
@@ -225,7 +217,6 @@ Additional features:
 | `/api/simulate` | POST | Run a single paging simulation with JSON body. |
 | `/api/segmentation` | POST | Run segmentation with custom operations (alloc/free/compact). |
 | `/api/live-segmentation` | GET | Run segmentation using real Windows process data. |
-| `/api/live-seg-compare` | GET | Compare all four segmentation strategies side-by-side. |
 | `/api/realtime-date` | GET | Get current system date/time for the live clock badge. |
 
 ---

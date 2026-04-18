@@ -3,7 +3,7 @@
 A Flask-based virtual memory simulator that combines:
 
 - Page replacement simulation: FIFO, LRU, Optimal
-- Segmentation and fragmentation simulation: First Fit, Best Fit, Worst Fit, Next Fit
+- Segmentation and fragmentation simulation with compaction and memory mapping
 - Interactive browser UI with step playback and charts
 - Optional live Windows process-driven workloads for realistic reference streams
 
@@ -14,7 +14,7 @@ The project is structured as reusable core algorithm modules plus a web applicat
 - Algorithm pages for FIFO, LRU, and Optimal with step-by-step visualization
 - Belady anomaly analysis for FIFO across multiple frame sizes
 - Overview dashboard for side-by-side algorithm comparison
-- Segmentation workspace with live process ingestion, allocation strategies, compaction, memory-map views, and operation history
+- Segmentation workspace with live process ingestion, compaction, memory-map views, and operation history
 - JSON APIs for direct integration and testing
 - Unit test suite for core logic
 
@@ -84,11 +84,7 @@ The project is structured as reusable core algorithm modules plus a web applicat
 ### Segmentation
 
 - Segment and SegmentTable model with block alignment support
-- Allocation strategies:
-   - first_fit
-   - best_fit
-   - worst_fit
-   - next_fit
+- Sequential hole scanning for segment placement (first fitting hole)
 - Free segment handling, hole tracking, and compaction
 - Translation with bounds and fault checks
 - Fragmentation metrics:
@@ -170,7 +166,6 @@ Key query params:
 Optional segmentation block can be included with:
 
 - operations: JSON list
-- strategy: first_fit or best_fit or worst_fit or next_fit
 - total_memory
 - block_size
 
@@ -199,7 +194,6 @@ Runs operation sequence through segmentation engine.
       {"action": "free", "name": "code"},
       {"action": "compact"}
    ],
-   "strategy": "first_fit",
    "total_memory": 4096,
    "block_size": 16
 }
@@ -211,7 +205,6 @@ Builds segmentation operations from live Windows process snapshot, then runs sim
 
 Key query params:
 
-- strategy
 - total_memory
 - block_size
 - max_processes

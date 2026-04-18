@@ -1314,3 +1314,273 @@ button {
   background: rgba(29, 78, 216, 0.2);
   color: var(--text-white);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ADDRESS TRANSLATOR PANEL
+   ═══════════════════════════════════════════════════════════ */
+.at-controls {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.at-controls .field { flex: 1; min-width: 120px; }
+.at-controls .field select,
+.at-controls .field input[type=number] { width: 100%; }
+
+.btn-translate {
+  background: linear-gradient(135deg, var(--accent-info) 0%, var(--accent-primary) 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 22px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-out);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.22);
+  white-space: nowrap;
+}
+.btn-translate:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(99, 102, 241, 0.32);
+  filter: brightness(1.08);
+}
+
+.at-result {
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.9;
+  transition: all 0.3s var(--ease-out);
+}
+.at-result-empty {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-dim);
+  color: var(--text-dimmer);
+  text-align: center;
+  padding: 24px;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 0.06em;
+}
+.at-result-valid {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  border-left: 4px solid var(--accent-green);
+}
+.at-result-trap {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  border-left: 4px solid var(--accent-red);
+  animation: trapShake 0.4s ease-out;
+}
+@keyframes trapShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+.at-step {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+.at-step-num {
+  color: var(--text-dimmer);
+  font-size: 10px;
+  min-width: 48px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.at-step-detail { color: var(--text-dim); }
+.at-step-detail .at-val { color: var(--accent-primary); font-weight: 600; }
+.at-step-detail .at-seg { color: var(--accent-info); }
+.at-step-detail .at-ok  { color: var(--accent-green); font-weight: 700; }
+.at-step-detail .at-err { color: var(--accent-red); font-weight: 700; }
+
+.at-final {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-dim);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.at-final-valid { color: var(--accent-green); }
+.at-final-trap  { color: var(--accent-red); }
+
+/* ═══════════════════════════════════════════════════════════
+   MEMORY BLOCK FLASH ANIMATIONS
+   ═══════════════════════════════════════════════════════════ */
+.mem-cell.flash-green {
+  animation: memFlashGreen 1.2s ease-out;
+  z-index: 10;
+}
+.mem-cell.flash-red {
+  animation: memFlashRed 1.2s ease-out;
+  z-index: 10;
+}
+@keyframes memFlashGreen {
+  0%   { box-shadow: 0 0 12px 4px rgba(16,185,129,0.8); transform: scaleY(1.5); }
+  50%  { box-shadow: 0 0 8px 2px rgba(16,185,129,0.4); transform: scaleY(1.2); }
+  100% { box-shadow: none; transform: scaleY(1); }
+}
+@keyframes memFlashRed {
+  0%   { box-shadow: 0 0 12px 4px rgba(239,68,68,0.8); transform: scaleY(1.5); }
+  50%  { box-shadow: 0 0 8px 2px rgba(239,68,68,0.4); transform: scaleY(1.2); }
+  100% { box-shadow: none; transform: scaleY(1); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HISTORY FILTER BAR
+   ═══════════════════════════════════════════════════════════ */
+.hist-filter-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.hist-filter {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 100px;
+  padding: 5px 14px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+.hist-filter:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-white);
+}
+.hist-filter.on {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 10px rgba(29, 78, 216, 0.24);
+}
+.hist-row.hist-trap {
+  border-left-color: var(--accent-red);
+  background: rgba(239, 68, 68, 0.04);
+}
+.hist-row.hist-translate {
+  border-left-color: var(--accent-info);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SEGMENT TABLE — EXPANDED GRID (9 columns)
+   ═══════════════════════════════════════════════════════════ */
+.seg-list-header-expanded,
+.seg-row-card-expanded {
+  grid-template-columns: 1.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.7fr 0.8fr 0.7fr 0.7fr !important;
+}
+.seg-trap-col {
+  color: var(--accent-warning) !important;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13.8px;
+}
+.btn-test-access {
+  background: var(--bg-card);
+  color: var(--accent-info);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+  white-space: nowrap;
+}
+.btn-test-access:hover {
+  background: var(--accent-info);
+  color: #fff;
+  border-color: var(--accent-info);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+/* Stats row — support 7 cards */
+.stats-row-7 { grid-template-columns: repeat(7, 1fr) !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   ADDRESS TRANSLATION MECHANICS SUB-SECTION
+   ═══════════════════════════════════════════════════════════ */
+.at-mechanics {
+  margin-top: 24px;
+  padding: 20px 22px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-lg);
+}
+.at-mech-title {
+  font-size: 11.2px;
+  color: var(--text-white);
+  margin-bottom: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.at-mech-row {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  line-height: 1.7;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-dim);
+}
+.at-mech-row strong { color: var(--accent-primary); font-weight: 600; }
+.at-mech-row code {
+  background: rgba(29, 78, 216, 0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: var(--text-white);
+}
+
+.at-live-example {
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: rgba(29, 78, 216, 0.04);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--text-dim);
+}
+.at-live-example .ex-ok  { color: var(--accent-green); font-weight: 600; }
+.at-live-example .ex-err { color: var(--accent-red); font-weight: 600; }
+.at-live-example .ex-val { color: var(--accent-primary); font-weight: 600; }
+
+/* Segment row invalid state */
+.seg-row-card.seg-invalid {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.seg-invalid-badge {
+  background: var(--accent-red);
+  color: #fff;
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  margin-left: 6px;
+}
