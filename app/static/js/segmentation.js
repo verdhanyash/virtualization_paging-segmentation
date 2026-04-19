@@ -13,7 +13,8 @@
     translateLog: [],
     trapCount: 0,
     histFilter: 'all',
-    previousProcessNames: []
+    previousProcessNames: [],
+    autoTranslateRan: false
   };
   var livePollInt = null;
   var pendingCustomOps = [];
@@ -264,14 +265,23 @@
     procColorMap = {};
     procColorIdx = 0;
     clearAutoTranslateTimers();
+    state.autoTranslateRan = false;
     loadLiveData();
     startLivePolling();
   }
   
   function triggerCompaction() {
-    var op = { action: 'compact' };
-    state.extraOps.push(op);
-    loadLiveData();
+    var useLive = document.getElementById('liveToggleSeg') && document.getElementById('liveToggleSeg').checked;
+    if (useLive) {
+      /* In live mode, set extraOps to a single compact (don't accumulate) */
+      state.extraOps = [{ action: 'compact' }];
+      loadLiveData();
+    } else {
+      /* In manual mode, add compact to pending custom ops and re-run */
+      pendingCustomOps.push({ action: 'compact' });
+      renderCustomOps();
+      loadLiveData();
+    }
   }
 
   function resetAll() {
@@ -283,6 +293,7 @@
     state.translateLog = [];
     state.trapCount = 0;
     state.previousProcessNames = [];
+    state.autoTranslateRan = false;
     procColorMap = {};
     procColorIdx = 0;
     renderAll();
@@ -322,8 +333,9 @@
     populateTranslatorDropdowns();
     renderLiveTranslateExample(snap);
 
-    /* Auto-translations after simulation completes */
-    if (snap && snap.segments && Object.keys(snap.segments).length > 0) {
+    /* Auto-translations: run ONCE after first simulation, not on every live poll */
+    if (snap && snap.segments && Object.keys(snap.segments).length > 0 && !state.autoTranslateRan) {
+      state.autoTranslateRan = true;
       runAutoTranslations(snap);
     }
   }
@@ -837,13 +849,16 @@
    * ══════════════════════════════════════════════ */
   function populateTranslatorDropdowns() {
     var procSelect = document.getElementById('at-proc');
+    var typeSelect = document.getElementById('at-type');
     if (!procSelect) return;
 
-    var currentVal = procSelect.value;
+    var currentProc = procSelect.value;
+    var currentType = typeSelect ? typeSelect.value : '';
     procSelect.innerHTML = '';
 
     if (!state.processes || state.processes.length === 0) {
       procSelect.innerHTML = '<option value="">\u2014 run simulation first \u2014</option>';
+      if (typeSelect) typeSelect.innerHTML = '<option value="">\u2014 select process \u2014</option>';
       return;
     }
 
@@ -873,7 +888,67 @@
     }
 
     /* Restore selection if still valid */
-    if (currentVal) procSelect.value = currentVal;
+    if (currentProc) procSelect.value = currentProc;
+
+    /* Listen for process change to update types */
+    procSelect.onchange = function() { updateTypeDropdown(currentType); };
+
+    /* Populate type dropdown for current/first process */
+    updateTypeDropdown(currentType);
+  }
+
+  function updateTypeDropdown(restoreType) {
+    var procSelect = document.getElementById('at-proc');
+    var typeSelect = document.getElementById('at-type');
+    if (!procSelect || !typeSelect) return;
+
+    var proc = procSelect.value;
+    typeSelect.innerHTML = '';
+
+    if (!proc) {
+      typeSelect.innerHTML = '<option value="">\u2014 select process \u2014</option>';
+      return;
+    }
+
+    var snap = state.snapshots.length > 0 ? state.snapshots[state.snapshots.length - 1] : null;
+    if (!snap || !snap.segments) {
+      typeSelect.innerHTML = '<option value="">\u2014 no data \u2014</option>';
+      return;
+    }
+
+    /* Find all segment types for this process */
+    var types = [];
+    var segNames = Object.keys(snap.segments);
+    for (var i = 0; i < segNames.length; i++) {
+      if (segNames[i].indexOf(proc) === 0) {
+        var parsed = parseSegName(segNames[i]);
+        if (parsed.type && types.indexOf(parsed.type) === -1) {
+          types.push(parsed.type);
+        }
+      }
+    }
+
+    if (types.length === 0) {
+      typeSelect.innerHTML = '<option value="">\u2014 no segments \u2014</option>';
+      return;
+    }
+
+    for (var t = 0; t < types.length; t++) {
+      var opt = document.createElement('option');
+      opt.value = types[t];
+      opt.textContent = types[t];
+      typeSelect.appendChild(opt);
+    }
+
+    /* Restore previous type selection if still valid */
+    if (restoreType) {
+      for (var r = 0; r < typeSelect.options.length; r++) {
+        if (typeSelect.options[r].value === restoreType) {
+          typeSelect.value = restoreType;
+          break;
+        }
+      }
+    }
   }
 
   function handleTranslateClick() {
