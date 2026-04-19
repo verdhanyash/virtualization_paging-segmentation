@@ -1,227 +1,130 @@
-# Virtual Memory Simulator
+# 🧠 Virtual Memory Simulator
 
-A Flask-based virtual memory simulator that combines:
+A modern, interactive Flask-based virtual memory simulator that visualizes page replacement algorithms and memory segmentation dynamics. It bridges the gap between theoretical operating system concepts and real-world execution by featuring an optional **Live Windows Process Feed** that pulls telemetry from your actual OS processes to simulate realistic memory workloads.
 
-- Page replacement simulation: FIFO, LRU, Optimal
-- Segmentation and fragmentation simulation with compaction and memory mapping
-- Interactive browser UI with step playback and charts
-- Optional live Windows process-driven workloads for realistic reference streams
+---
 
-The project is structured as reusable core algorithm modules plus a web application layer built from Flask templates and static assets.
+## ✨ Key Features
 
-## Highlights
+- **Page Replacement Simulation**
+  - Visualize algorithms: **FIFO**, **LRU**, and **Optimal**.
+  - Interactive step-by-step playback to see hits, faults, and evictions occur in real-time.
+  - Automatic mathematical demonstration of **Belady's Anomaly** across memory frame sizes.
 
-- Algorithm pages for FIFO, LRU, and Optimal with step-by-step visualization
-- Belady anomaly analysis for FIFO across multiple frame sizes
-- Overview dashboard for side-by-side algorithm comparison
-- Segmentation workspace with live process ingestion, compaction, memory-map views, and operation history
-- JSON APIs for direct integration and testing
-- Unit test suite for core logic
+- **Segmentation & Fragmentation**
+  - Live segmentation workspace with dynamic visual memory mapping.
+  - Granular operation tracking for allocations, frees, and system compactions.
+  - Real-time calculation of **Internal & External Fragmentation** metrics.
 
-## Tech Stack
+- **Live Windows Integration**
+  - Drive simulations using *actual* running processes on your Windows host.
+  - Extracts process Working Set (WS) memory and CPU logic via PowerShell.
+  - Synthesizes realistic reference strings incorporating proper spatial and temporal locality.
 
-- Backend: Python, Flask
-- Algorithms: Pure Python modules in core
-- Frontend: HTML templates, vanilla JavaScript, shared CSS
-- Charts: Chart.js (client-side)
-- Tests: pytest
-- Runtime options: local Flask app, Gunicorn process
+---
 
-## Project Structure
+## 🛠️ Tech Stack
 
-```text
-.
-├── app.py
-├── app/
-│   ├── templates/
-│   │   ├── index.html
-│   │   ├── fifo.html
-│   │   ├── lru.html
-│   │   ├── optimal.html
-│   │   └── segmentation.html
-│   └── static/
-│       ├── css/styles.css
-│       └── js/
-│           ├── index.js
-│           ├── fifo.js
-│           ├── lru.js
-│           ├── optimal.js
-│           └── segmentation.js
-├── core/
-│   ├── engine.py
-│   ├── fifo.py
-│   ├── lru.py
-│   ├── optimal.py
-│   └── segmentation.py
-├── visualization/
-│   ├── charts.py
-│   ├── comparison.py
-│   └── belady_chart.py
-├── tests/
-│   ├── test_engine.py
-│   ├── test_fifo.py
-│   ├── test_lru.py
-│   ├── test_optimal.py
-│   └── test_segmentation.py
-├── scripts/get_processes.ps1
-└── requirements.txt
-```
+- **Backend:** Python 3.10+, Flask
+- **Core Algorithms:** Pure Python (Zero external mathematical dependencies)
+- **Frontend:** Vanilla JavaScript, HTML5 templates, CSS
+- **Visualization:** Chart.js (client-side)
+- **Testing:** Pytest
 
-## What Is Implemented
+---
 
-### Paging
-
-- FIFO simulation with full step history and Belady anomaly detection
-- LRU simulation using recency tracking
-- Optimal simulation using future reference look-ahead
-- Unified output shape across algorithms:
-   - algorithm
-   - reference_string
-   - frame_count
-   - steps with page, frames, fault, evicted
-   - total_faults, total_hits, fault_positions
-
-### Segmentation
-
-- Segment and SegmentTable model with block alignment support
-- Sequential hole scanning for segment placement (first fitting hole)
-- Free segment handling, hole tracking, and compaction
-- Translation with bounds and fault checks
-- Fragmentation metrics:
-   - used
-   - requested
-   - internal_frag
-   - external_frag
-   - total_free
-   - utilization
-- Snapshot-driven simulation via simulate_fragmentation
-
-### Live Mode
-
-- Realtime date endpoint
-- Realtime algorithm endpoint with optional live reference generation
-- Windows process integration path using PowerShell process data
-- Live segmentation endpoint that builds operations from active process snapshots
-
-## Setup and Run
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Python 3.10+
-- Windows is required for live Windows process telemetry paths
-   - Non-Windows users can still use manual input and non-live simulation APIs
+- **Python 3.10+**
+- **Windows OS** (Optional, but highly recommended for the live telemetry feed. Non-Windows users can still use manual inputs or pre-programmed simulations.)
 
-### Install
+### Installation
+
+Clone the repository and set up your virtual environment:
 
 ```bash
+# Clone the repository
+git clone https://github.com/verdhanyash/virtualization_paging-segmentation.git
+cd OS_PROJECT
+
+# Create and activate a Virtual Environment
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate   # On Windows
+# source .venv/bin/activate # On Unix/MacOS
+
+# Install Dependencies
 pip install -r requirements.txt
 ```
 
-### Start the app
+### Running the App
+
+Start the Flask development server:
 
 ```bash
 python app.py
 ```
 
-Open:
+Open your browser and navigate to: [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
-- http://127.0.0.1:5000
+---
 
-## Run Tests
+## 🧪 Testing
+
+The project includes a comprehensive suite of **48 Unit Tests** logically separated across the core modules of the memory simulator to guarantee mathematical precision.
+
+To run the entire test suite, make sure your virtual environment is active and execute:
 
 ```bash
-.venv\Scripts\python.exe -m pytest -q
+python -m pytest -v
 ```
 
-## Web Routes
+### Test Coverage Breakdown
 
-- GET / : Overview dashboard
-- GET /fifo : FIFO page
-- GET /lru : LRU page
-- GET /optimal : Optimal page
-- GET /segmentation : Segmentation page
+- **Segmentation Memory Tests (30 Tests):** Validation for contiguous block allocation, boundaries & addressing exceptions, defragmentation/compaction algorithms, hole recycling, and real-time computation of external and internal fragmentation.
+- **Page Replacement Data Structures (12 Tests):** Algorithmic verification spanning across queue cache logic for **FIFO** & **LRU**, predictive caching behavior for the **Optimal** algorithm, and explicitly validating **Belady's Anomaly**.
+- **Core Engine Mechanics (6 Tests):** Tests baseline operations such as virtual-to-physical translation functions, page fault flaggers, bounds limiters, and basic initialization routines.
 
-## API Reference
+---
 
-### GET /api/realtime-date
+## 🔌 Core APIs
 
-Returns current datetime metadata and day or night theme hint.
+The simulation logic is decoupled from the UI, allowing you to interface directly with the simulation engines via JSON endpoints.
 
-### GET /api/realtime-algorithms
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/realtime-algorithms` | Returns simulated or live results for a paging algorithm. |
+| `POST` | `/api/simulate` | Submit a custom JSON payload containing a reference string to step through Paging. |
+| `POST` | `/api/segmentation` | Run a custom sequence of allocation/free operations through the Segmentation engine. |
+| `GET` | `/api/live-segmentation` | Builds operations from a live Windows process snapshot and runs the simulation. |
 
-Builds paging payload for one selected algorithm plus comparison results.
+*(For full API parameter references, inspect `app.py` directly).*
 
-Key query params:
+---
 
-- reference_string: comma-separated or spaced pages
-- frames: integer
-- algorithm: FIFO or LRU or Optimal
-- max_belady_frames: integer
-- live: 0 or 1
-- live_source: windows
-- window_size, max_page: live stream controls
+## 📁 Project Architecture
 
-Optional segmentation block can be included with:
-
-- operations: JSON list
-- total_memory
-- block_size
-
-### POST /api/simulate
-
-Paging simulation from JSON body:
-
-```json
-{
-   "reference_string": [7, 0, 1, 2, 0, 3, 0, 4],
-   "frames": 3,
-   "algorithm": "FIFO",
-   "max_belady_frames": 10
-}
+```text
+OS_PROJECT/
+├── app.py                   # Main Flask Application
+├── app/                     # Frontend Application
+│   ├── templates/           # HTML views (index, fifo, lru, optimal, segmentation)
+│   └── static/              # Vanilla JS logic & raw CSS styles
+├── core/                    # Core Simulation Engines
+│   ├── engine.py            # Base constructs (Pages, Frames, Tables)
+│   ├── fifo.py              # FIFO logic
+│   ├── lru.py               # LRU logic
+│   ├── optimal.py           # Optimal logic
+│   └── segmentation.py      # Segmentation logic
+├── tests/                   # Pytest suite
+└── requirements.txt         # Dependencies
 ```
 
-### POST /api/segmentation
+---
 
-Runs operation sequence through segmentation engine.
+## 🚢 Deployment
 
-```json
-{
-   "operations": [
-      {"action": "alloc", "name": "code", "size": 200},
-      {"action": "alloc", "name": "stack", "size": 300},
-      {"action": "free", "name": "code"},
-      {"action": "compact"}
-   ],
-   "total_memory": 4096,
-   "block_size": 16
-}
-```
+The repository is built serverless-ready for **Vercel** (`vercel.json`) and incorporates `gunicorn` mapping for environments like **Heroku/Render** natively.
 
-### GET /api/live-segmentation
-
-Builds segmentation operations from live Windows process snapshot, then runs simulation.
-
-Key query params:
-
-- total_memory
-- block_size
-- max_processes
-- extra_ops (JSON array)
-
-## Deployment Notes
-
-- Procfile is configured for Gunicorn:
-   - web: gunicorn app:flask_app
-- Vercel is configured through vercel.json to route all requests to app.py
-- app.py exports app = flask_app for serverless compatibility
-
-See docs/deployment/vercel.md for a step-by-step Vercel flow.
-
-## Developer Notes
-
-- Core logic is cleanly separated from UI-specific rendering code
-- Frontend and backend are aligned around stable result payload contracts
-- Test suite validates algorithm correctness and segmentation behavior across edge cases
-- Paging JS is shared via paging-common.js; each algorithm page sets window.ALGO only
+*Note: Live Windows metrics endpoints will fall back to pseudo-random simulation if queried on a non-Windows cloud deployment.*
