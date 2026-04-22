@@ -710,6 +710,12 @@ input:focus, select:focus {
   box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.16);
 }
 
+/* Hide dropdown arrow and number spinner on Address Translator */
+#at-seg { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+#at-offset::-webkit-inner-spin-button,
+#at-offset::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+#at-offset { -moz-appearance: textfield; }
+
 /* ═══════════════════════════════════════════════════════════
    DYNAMICS SECTION
    ═══════════════════════════════════════════════════════════ */

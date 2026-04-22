@@ -269,8 +269,14 @@ function refreshLive() {
 }
 
 function triggerCompaction() {
+  var useLive = document.getElementById('liveToggleSeg') && document.getElementById('liveToggleSeg').checked;
   var op = { action: 'compact' };
-  state.extraOps.push(op);
+  if (useLive) {
+    state.extraOps.push(op);
+  } else {
+    pendingCustomOps.push(op);
+    renderCustomOps();
+  }
   loadLiveData();
 }
 
@@ -836,53 +842,38 @@ function applyHistFilter() {
  *  ADDRESS TRANSLATOR
  * ══════════════════════════════════════════════ */
 function populateTranslatorDropdowns() {
-  var procSelect = document.getElementById('at-proc');
-  if (!procSelect) return;
+  var segSelect = document.getElementById('at-seg');
+  if (!segSelect) return;
 
-  var currentVal = procSelect.value;
-  procSelect.innerHTML = '';
-
-  if (!state.processes || state.processes.length === 0) {
-    procSelect.innerHTML = '<option value="">\u2014 run simulation first \u2014</option>';
-    return;
-  }
+  var currentVal = segSelect.value;
+  segSelect.innerHTML = '';
 
   var snap = state.snapshots.length > 0 ? state.snapshots[state.snapshots.length - 1] : null;
 
-  for (var i = 0; i < state.processes.length; i++) {
-    var p = state.processes[i];
-    var pid = (p.pids && p.pids.length > 0) ? p.pids[0] : '';
+  if (!snap || !snap.segments || Object.keys(snap.segments).length === 0) {
+    segSelect.innerHTML = '<option value="">\u2014 run simulation first \u2014</option>';
+    return;
+  }
+
+  var segNames = Object.keys(snap.segments);
+  for (var i = 0; i < segNames.length; i++) {
+    var seg = snap.segments[segNames[i]];
     var opt = document.createElement('option');
-    opt.value = p.name;
-    opt.textContent = p.name + (pid ? ' PID:' + pid : '');
-
-    /* Check if process still has segments */
-    if (snap && snap.segments) {
-      var hasSegs = false;
-      var segNames = Object.keys(snap.segments);
-      for (var s = 0; s < segNames.length; s++) {
-        if (segNames[s].indexOf(p.name) === 0) { hasSegs = true; break; }
-      }
-      if (!hasSegs) {
-        opt.textContent += ' [NO SEGMENTS]';
-        opt.disabled = true;
-      }
-    }
-
-    procSelect.appendChild(opt);
+    opt.value = segNames[i];
+    opt.textContent = segNames[i] + ' (base=' + seg.base + ', limit=' + seg.limit + ')';
+    segSelect.appendChild(opt);
   }
 
   /* Restore selection if still valid */
-  if (currentVal) procSelect.value = currentVal;
+  if (currentVal) segSelect.value = currentVal;
 }
 
 function handleTranslateClick() {
-  var proc = document.getElementById('at-proc').value;
-  var type = document.getElementById('at-type').value;
+  var segName = document.getElementById('at-seg').value;
   var offset = parseInt(document.getElementById('at-offset').value, 10);
 
-  if (!proc) {
-    showSegToast('Select a process first', 'error');
+  if (!segName) {
+    showSegToast('Select a segment first', 'error');
     return;
   }
   if (isNaN(offset) || offset < 0) {
@@ -890,23 +881,23 @@ function handleTranslateClick() {
     return;
   }
 
-  doTranslate(proc, type, offset, true);
+  doTranslateByName(segName, offset, true);
 }
 
-function doTranslate(proc, type, offset, animate) {
+function doTranslateByName(segName, offset, animate) {
   var snap = state.snapshots.length > 0 ? state.snapshots[state.snapshots.length - 1] : null;
   if (!snap || !snap.segments) {
     showSegToast('No simulation data available', 'error');
     return null;
   }
 
-  var segName = proc + type;
+  var parsed = parseSegName(segName);
   var seg = snap.segments[segName];
   var resultEl = document.getElementById('at-result');
 
   if (!seg) {
     /* Segment not found */
-    var result = { proc: proc, type: type, offset: offset, isTrap: true, reason: 'not_found', limit: 0, pa: 0 };
+    var result = { proc: parsed.proc, type: parsed.type, offset: offset, isTrap: true, reason: 'not_found', limit: 0, pa: 0 };
     resultEl.className = 'at-result at-result-trap';
     resultEl.innerHTML =
       '<div class="at-step"><span class="at-step-num">Step 1</span><span class="at-step-detail">Logical Address = (<span class="at-seg">' + segName + '</span>, <span class="at-val">' + offset + '</span>)</span></div>' +
@@ -924,7 +915,7 @@ function doTranslate(proc, type, offset, animate) {
   var limit = seg.limit;
   var isTrap = offset >= limit;
 
-  var result = { proc: proc, type: type, offset: offset, isTrap: isTrap, limit: limit, base: base, pa: isTrap ? 0 : base + offset };
+  var result = { proc: parsed.proc, type: parsed.type, offset: offset, isTrap: isTrap, limit: limit, base: base, pa: isTrap ? 0 : base + offset };
 
   if (isTrap) {
     resultEl.className = 'at-result at-result-trap';
@@ -981,12 +972,11 @@ function highlightMemoryBlocks(segName, isTrap) {
 }
 
 function prefillTranslator(proc, type, offset) {
-  var procSelect = document.getElementById('at-proc');
-  var typeSelect = document.getElementById('at-type');
+  var segSelect = document.getElementById('at-seg');
   var offsetInput = document.getElementById('at-offset');
+  var segName = proc + type;
 
-  if (procSelect) procSelect.value = proc;
-  if (typeSelect) typeSelect.value = type;
+  if (segSelect) segSelect.value = segName;
   if (offsetInput) offsetInput.value = offset;
 
   /* Scroll to translator panel */
@@ -994,7 +984,7 @@ function prefillTranslator(proc, type, offset) {
   if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   /* Auto-translate */
-  setTimeout(function () { doTranslate(proc, type, offset, true); }, 300);
+  setTimeout(function () { doTranslateByName(segName, offset, true); }, 300);
 }
 
 /* ══════════════════════════════════════════════
@@ -1046,13 +1036,12 @@ function runAutoTranslations(snap) {
     (function (entry, delay) {
       var timer = setTimeout(function () {
         /* Update inputs to show current translation */
-        var procSelect = document.getElementById('at-proc');
-        var typeSelect = document.getElementById('at-type');
+        var segSelect = document.getElementById('at-seg');
         var offsetInput = document.getElementById('at-offset');
-        if (procSelect) procSelect.value = entry.proc;
-        if (typeSelect) typeSelect.value = entry.type;
+        var segName = entry.proc + entry.type;
+        if (segSelect) segSelect.value = segName;
         if (offsetInput) offsetInput.value = entry.offset;
-        doTranslate(entry.proc, entry.type, entry.offset, true);
+        doTranslateByName(segName, entry.offset, true);
       }, delay);
       autoTranslateTimers.push(timer);
     })(translations[idx], (idx + 1) * 800);
