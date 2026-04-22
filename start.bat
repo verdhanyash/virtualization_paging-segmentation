@@ -1,4 +1,5 @@
-@echo off
+    
+    @echo off
 setlocal
 
 REM Run from the repository root (directory containing this file).
