@@ -11,7 +11,7 @@
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-group-title">Active Monitoring</div>
-    <a href="/segmentation" class="sidebar-link active"><span class="icon">&#9678;</span> SEG_CORE_V1</a>
+    <a href="/segmentation" class="sidebar-link active"><span class="icon">&#9678;</span> SEG CORE V1</a>
 
     <div class="sidebar-group-title">Modules</div>
     <a href="#proc-list" class="sidebar-link"><span class="icon">&#9643;</span> PROCESSES</a>
@@ -28,19 +28,17 @@
         <a href="/fifo" class="top-nav-link">FIFO</a>
         <a href="/lru" class="top-nav-link">LRU</a>
         <a href="/optimal" class="top-nav-link">OPTIMAL</a>
-        <a href="/segmentation" class="top-nav-link active">SEGMENT_FIT</a>
+        <a href="/segmentation" class="top-nav-link active">SEGMENT FIT</a>
       </div>
-      <div class="header-status">
-        <span class="dot"></span>
-      </div>
+
     </nav>
 
     <div class="content-area">
 
       <!-- HEADER -->
       <div>
-        <h1 class="super-title">MEMORY_SEGMENTATION_ANALYSIS</h1>
-        <div class="sub-title">LIVE_SYSTEM_TELEMETRY // ADDR_BUS_STABLE</div>
+        <h1 class="super-title">MEMORY SEGMENTATION ANALYSIS</h1>
+        <div class="sub-title">LIVE SYSTEM TELEMETRY // ADDR BUS STABLE</div>
       </div>
 
       <!-- ═══ MAIN 2-COL GRID ═══ -->
@@ -105,9 +103,9 @@
 
           <!-- EXECUTION ENGINE (visible on launch) -->
           <div class="panel">
-            <div class="panel-header"><div class="panel-title">EXECUTION_ENGINE</div></div>
+            <div class="panel-header"><div class="panel-title">EXECUTION ENGINE</div></div>
             <div class="exec-engine">
-              <button class="btn-primary" id="btn-start" onclick="refreshLive()">START_SIMULATION <span>▶</span></button>
+              <button class="btn-primary" id="btn-start" onclick="refreshLive()">START SIMULATION <span>▶</span></button>
               <div class="row-btns">
                 <button class="btn-primary" onclick="triggerCompaction()" style="background:var(--accent-purple);border-color:var(--accent-purple);margin-right:8px;">COMPACT MEMORY</button>
                 <button class="btn-gray btn-reset-large" id="btn-reset" onclick="resetAll()">RESET</button>
@@ -122,7 +120,7 @@
               <div class="panel-meta" id="proc-count-badge">—</div>
             </div>
             <div class="proc-list" id="proc-list">
-              <div class="empty">Click START_SIMULATION to load</div>
+              <div class="empty">Click START SIMULATION to load</div>
             </div>
           </div>
         </div>
@@ -224,14 +222,9 @@
       <!-- ═══ SEGMENTATION DYNAMICS ═══ -->
       <div class="panel dynamics-panel">
         <div>
-          <div class="dyn-title">CORE_LOGIC / SUBSYSTEM_04</div>
+          <div class="dyn-title">CORE LOGIC / SUBSYSTEM 04</div>
           <div class="dyn-heading">SEGMENTATION DYNAMICS</div>
-          <div class="dyn-text" style="margin-bottom:16px;">
-            In memory management, <span>SEGMENTATION</span> is a technique that divides the memory into several portions or segments of different sizes. Unlike paging, segmentation provides a user-centric view of memory where processes are divided into logical units such as code, data, and stack.
-          </div>
-          <div class="dyn-text">
-            Our simulator employs a <strong>Variable Partitioning</strong> model. As processes are loaded and removed, "holes" of free memory are created, leading to External Fragmentation.
-          </div>
+
           <!-- ADDRESS TRANSLATION MECHANICS -->
           <div class="at-mechanics">
             <div class="at-mech-title">ADDRESS TRANSLATION MECHANICS</div>
@@ -242,7 +235,7 @@
           </div>
         </div>
         <div class="algo-complex">
-          <div class="ac-title">ALGORITHM_COMPLEXITY</div>
+          <div class="ac-title">ALGORITHM COMPLEXITY</div>
           <div class="ac-row"><span class="ac-lbl">HOLE SEARCH:</span><span class="ac-val" id="ax-lat">O(N)</span></div>
           <div class="ac-row"><span class="ac-lbl">COMPACTION LATENCY:</span><span class="ac-warn">HIGH</span></div>
           <div class="ac-row"><span class="ac-lbl">ADDRESS TRANSLATION:</span><span class="ac-val">&lt; 12MS</span></div>

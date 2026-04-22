@@ -235,7 +235,7 @@ var allResults = null;
     Chart.defaults.color = '#204768';
 
     function applyRealtimeDateUI(payload) {
-      var nav = document.querySelector('nav');
+      return;
       if (!nav || !payload) return;
 
       var badge = document.getElementById('realtimeDateBadge');

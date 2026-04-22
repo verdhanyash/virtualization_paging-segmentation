@@ -12,7 +12,7 @@
   
   <aside class="sidebar">
     <div class="sidebar-group-title">Active Monitoring</div>
-    <a href="/fifo" class="sidebar-link active"><span class="icon">&#9678;</span> FIFO_CORE_V1</a>
+    <a href="/fifo" class="sidebar-link active"><span class="icon">&#9678;</span> FIFO CORE V1</a>
 
     <div class="sidebar-group-title">Modules</div>
     <a href="#controlsSection" class="sidebar-link"><span class="icon">&#9643;</span> PROCESSES</a>
@@ -30,32 +30,25 @@
         <a href="/fifo" class="top-nav-link active">FIFO</a>
         <a href="/lru" class="top-nav-link">LRU</a>
         <a href="/optimal" class="top-nav-link">OPTIMAL</a>
-        <a href="/segmentation" class="top-nav-link">SEGMENT_FIT</a>
+        <a href="/segmentation" class="top-nav-link">SEGMENT FIT</a>
       </div>
-      <div class="header-status">
-        <span class="dot"></span>
-      </div>
+
     </nav>
     <div class="content-area">
       
       <div>
-        <h1 class="super-title">FIFO_PAGING_ANALYSIS</h1>
-        <div class="sub-title">LIVE_SYSTEM_TELEMETRY // MEMORY_PAGING</div>
+        <h1 class="super-title">FIFO PAGING ANALYSIS</h1>
+        <div class="sub-title">LIVE SYSTEM TELEMETRY // MEMORY PAGING</div>
       </div>
     
       
 
   <div class="non-hdr">
     <h1>FIFO &mdash; First In, First Out</h1>
-    <span class="algo-badge"><span class="live-dot"></span> Live Windows Processes</span>
+
   </div>
 
-  <!-- Algorithm Description -->
-  <div class="algo-desc">
-    <strong>How FIFO works:</strong> Pages are loaded into frames in order. When a page fault occurs and all frames are full, the <strong>oldest page</strong> (the one that entered memory first) is evicted &mdash; like a queue. FIFO is simple but can suffer from <strong>B&eacute;lady&rsquo;s Anomaly</strong>, where <em>increasing</em> the number of frames actually <em>increases</em> faults.
-    <br><br>
-    <strong>Live Process Connection:</strong> The reference string is generated from <strong>real Windows processes</strong> on your machine. Instead of using static memory size, virtual pages and simulated CPU time slices are assigned proportionally based on the <strong>most volatile metric: actual CPU execution time</strong>. Highly active processes like <code>brave</code> generating high CPU activity get more pages and reference hits than idle apps. The sequence simulates CPU scheduling with <strong>locality of reference</strong>: active processes get more time slices, and page accesses follow spatial/temporal locality patterns.
-  </div>
+
 
   <!-- Controls -->
   <div id="controlsSection" class="panel">
@@ -178,7 +171,6 @@
 
     </div>
   </main>
-    <script>window.ALGO = 'FIFO';</script>
     <script src="{{ url_for('static', filename='js/paging-common.js') }}"></script>
 </body>
 </html>

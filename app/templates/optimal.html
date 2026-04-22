@@ -12,7 +12,7 @@
   
   <aside class="sidebar">
     <div class="sidebar-group-title">Active Monitoring</div>
-    <a href="/optimal" class="sidebar-link active"><span class="icon">&#9678;</span> OPT_CORE_V1</a>
+    <a href="/optimal" class="sidebar-link active"><span class="icon">&#9678;</span> OPT CORE V1</a>
 
     <div class="sidebar-group-title">Modules</div>
     <a href="#controlsSection" class="sidebar-link"><span class="icon">&#9643;</span> PROCESSES</a>
@@ -30,32 +30,25 @@
         <a href="/fifo" class="top-nav-link">FIFO</a>
         <a href="/lru" class="top-nav-link">LRU</a>
         <a href="/optimal" class="top-nav-link active">OPTIMAL</a>
-        <a href="/segmentation" class="top-nav-link">SEGMENT_FIT</a>
+        <a href="/segmentation" class="top-nav-link">SEGMENT FIT</a>
       </div>
-      <div class="header-status">
-        <span class="dot"></span>
-      </div>
+
     </nav>
     <div class="content-area">
       
       <div>
-        <h1 class="super-title">OPTIMAL_PAGING_ANALYSIS</h1>
-        <div class="sub-title">LIVE_SYSTEM_TELEMETRY // MEMORY_PAGING</div>
+        <h1 class="super-title">OPTIMAL PAGING ANALYSIS</h1>
+        <div class="sub-title">LIVE SYSTEM TELEMETRY // MEMORY PAGING</div>
       </div>
     
       
 
   <div class="non-hdr">
     <h1>Optimal &mdash; Furthest Future Use</h1>
-    <span class="algo-badge"><span class="live-dot"></span> Live Windows Processes</span>
+
   </div>
 
-  <!-- Algorithm Description -->
-  <div class="algo-desc">
-    <strong>How Optimal works:</strong> This is the <strong>theoretical best</strong> algorithm. On each page fault, it looks <em>ahead</em> in the reference string and evicts the page whose next use is <strong>farthest in the future</strong> (or never used again). It produces the <strong>minimum possible faults</strong> for any given reference string. It is not implementable in practice (requires future knowledge) but serves as the gold standard benchmark.
-    <br><br>
-    <strong>Live Process Connection:</strong> The reference string comes from <strong>real Windows processes</strong>, dynamically driven by the <strong>most volatile metric (CPU time)</strong>. Compare Optimal's fault count against FIFO and LRU on this live workload &mdash; the gap reveals how much room each algorithm has for improvement. By weighting references by active CPU execution (simulating real thrashing and page fault probability), you'll see LRU typically closely trails Optimal's performance, while FIFO struggles.
-  </div>
+
 
   <!-- Controls -->
   <div id="controlsSection" class="panel">
@@ -174,7 +167,6 @@
 
     </div>
   </main>
-    <script>window.ALGO = 'Optimal';</script>
     <script src="{{ url_for('static', filename='js/paging-common.js') }}"></script>
 </body>
 </html>

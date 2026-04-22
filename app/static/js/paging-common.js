@@ -1,10 +1,17 @@
 /**
  * paging-common.js — Shared logic for FIFO, LRU, and Optimal paging pages.
  *
- * Each algorithm page only needs to set window.ALGO before loading this file.
  * All rendering, API calls, step playback, charts, and process source display
  * are handled here in one place.
  */
+
+if (window.location.pathname.includes('fifo')) {
+    window.ALGO = 'FIFO';
+} else if (window.location.pathname.includes('lru')) {
+    window.ALGO = 'LRU';
+} else if (window.location.pathname.includes('optimal')) {
+    window.ALGO = 'Optimal';
+}
 
 var result = null, curStep = -1, autoInt = null;
 var allResults = null;
@@ -581,7 +588,7 @@ $('refIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') runS
 $('fcSlider').addEventListener('change', scheduleRun);
 
 function applyRealtimeDateUI(payload) {
-  var nav = document.querySelector('nav');
+  return;
   if (!nav || !payload) return;
 
   var badge = document.getElementById('realtimeDateBadge');
