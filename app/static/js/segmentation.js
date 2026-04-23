@@ -18,6 +18,7 @@ var state = {
 var livePollInt = null;
 var pendingCustomOps = [];
 var autoTranslateTimers = [];
+var autoTranslateRan = false;
 
 function showSegToast(msg, type) {
   var existing = document.getElementById('seg-toast');
@@ -261,6 +262,7 @@ function refreshLive() {
   state.extraOps = [];
   state.translateLog = [];
   state.trapCount = 0;
+  autoTranslateRan = false;
   procColorMap = {};
   procColorIdx = 0;
   clearAutoTranslateTimers();
@@ -289,6 +291,7 @@ function resetAll() {
   state.translateLog = [];
   state.trapCount = 0;
   state.previousProcessNames = [];
+  autoTranslateRan = false;
   procColorMap = {};
   procColorIdx = 0;
   renderAll();
@@ -328,8 +331,9 @@ function renderAll() {
   populateTranslatorDropdowns();
   renderLiveTranslateExample(snap);
 
-  /* Auto-translations after simulation completes */
-  if (snap && snap.segments && Object.keys(snap.segments).length > 0) {
+  /* Auto-translations — run once per simulation start, not on every poll */
+  if (!autoTranslateRan && snap && snap.segments && Object.keys(snap.segments).length > 0) {
+    autoTranslateRan = true;
     runAutoTranslations(snap);
   }
 }
@@ -1006,8 +1010,12 @@ function runAutoTranslations(snap) {
 
   var translations = [];
 
-  /* Generate 7 valid + 3 trap translations */
-  for (var v = 0; v < 7; v++) {
+  /* Scale count to segment count: min(segCount + 2, 12) */
+  var totalCount = Math.min(segNames.length + 2, 12);
+  var validCount = Math.max(1, Math.round(totalCount * 0.7));
+  var trapCount = totalCount - validCount;
+
+  for (var v = 0; v < validCount; v++) {
     var sn = segNames[Math.floor(Math.random() * segNames.length)];
     var seg = snap.segments[sn];
     var parsed = parseSegName(sn);
@@ -1015,7 +1023,7 @@ function runAutoTranslations(snap) {
     translations.push({ proc: parsed.proc, type: parsed.type, offset: validOffset });
   }
 
-  for (var tr = 0; tr < 3; tr++) {
+  for (var tr = 0; tr < trapCount; tr++) {
     var sn2 = segNames[Math.floor(Math.random() * segNames.length)];
     var seg2 = snap.segments[sn2];
     var parsed2 = parseSegName(sn2);
