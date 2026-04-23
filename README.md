@@ -65,9 +65,7 @@ Both modules can operate in **manual mode** (user-supplied inputs) or **live mod
 ├── requirements.txt                # Python dependencies (flask, gunicorn, pytest)
 │
 ├── core/                           # Pure algorithm modules (no Flask dependency)
-│   ├── __init__.py                 # Package init — re-exports engine.py classes
-│   ├── engine.py                   # Base infrastructure: PageTable, FramePool,
-│   │                               #   translate_address(), detect_page_fault()
+│   ├── __init__.py                 # Package init
 │   ├── fifo.py                     # FIFO page replacement + Bélády's Anomaly detection
 │   ├── lru.py                      # LRU page replacement using OrderedDict
 │   ├── optimal.py                  # Optimal (MIN) page replacement with future look-ahead
@@ -155,7 +153,6 @@ Both modules can operate in **manual mode** (user-supplied inputs) or **live mod
 │  optimal.py ─── run_optimal(), _find_optimal_victim()           │
 │  segmentation.py ── SegmentTable, Segment, SegmentFaultError,   │
 │                     simulate_fragmentation()                     │
-│  engine.py ──── PageTable, FramePool (base infrastructure)      │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -336,4 +333,3 @@ The segmentation simulator tracks these metrics in real time:
 - **Unified output shape**: All paging algorithms return the same structure (`algorithm`, `reference_string`, `frame_count`, `steps[]`, `total_faults`, `total_hits`, `fault_positions`)
 - **Address translation is client-side**: The segmentation page performs address translation in JavaScript for instant feedback. The Python `SegmentTable.translate()` method exists for correctness validation in tests
 - **Auto-polling**: Paging pages poll `/api/realtime-algorithms` every 10 seconds for live updates; segmentation polls `/api/live-segmentation` every 5 seconds when in live mode
-- **`engine.py` provides base infrastructure**: `PageTable` and `FramePool` classes define the canonical data structures for virtual memory. While the algorithm modules use lightweight internal equivalents for performance, `engine.py` serves as the foundational reference and is required by the package init
